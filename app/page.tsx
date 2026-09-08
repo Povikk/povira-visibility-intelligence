@@ -15,6 +15,7 @@ import {
   Globe2,
   LayoutDashboard,
   Menu,
+  MessageCircle,
   Moon,
   Plus,
   Radar,
@@ -126,6 +127,21 @@ export default function Home() {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AuditResult | null>(null);
+  const [chatGptCopied, setChatGptCopied] = useState(false);
+
+  async function analyzeWithChatGPT() {
+    if (!result) return;
+    try {
+      await navigator.clipboard.writeText(buildChatGptPrompt(result));
+      window.open('https://chatgpt.com/', '_blank', 'noopener,noreferrer');
+      setChatGptCopied(true);
+      window.setTimeout(() => setChatGptCopied(false), 8_000);
+    } catch {
+      setError(
+        "Le navigateur n’a pas autorisé la copie. Réessayez depuis une fenêtre sécurisée.",
+      );
+    }
+  }
 
   async function audit(payload = { name: business, url, activity }) {
     setRunning(true);
@@ -345,12 +361,22 @@ export default function Home() {
                     : `Exemple interactif · ${pages} pages simulées`}
                 </p>
               </div>
-              <a
-                href={result ? `/report/${result.id}` : '/report/demo'}
-                className={buttonVariants({ variant: 'outline', size: 'lg' })}
-              >
-                <FileText /> Générer le rapport
-              </a>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {result && (
+                  <Button size="lg" onClick={analyzeWithChatGPT}>
+                    {chatGptCopied ? <Check /> : <MessageCircle />}
+                    {chatGptCopied
+                      ? 'Copié — collez dans ChatGPT'
+                      : 'Analyser avec ChatGPT'}
+                  </Button>
+                )}
+                <a
+                  href={result ? `/report/${result.id}` : '/report/demo'}
+                  className={buttonVariants({ variant: 'outline', size: 'lg' })}
+                >
+                  <FileText /> Générer le rapport
+                </a>
+              </div>
             </div>
             {running && (
               <section
@@ -801,4 +827,37 @@ function scoreSummary(score: number) {
       : score >= 45
         ? 'Une visibilité encore irrégulière.'
         : 'Des fondamentaux importants restent à construire.';
+}
+
+function buildChatGptPrompt(result: AuditResult) {
+  const performance = result.performance
+    ? `PageSpeed mobile : performance ${result.performance.performance ?? 'indisponible'}/100, accessibilité ${result.performance.accessibility ?? 'indisponible'}/100, bonnes pratiques ${result.performance.bestPractices ?? 'indisponible'}/100, SEO ${result.performance.seo ?? 'indisponible'}/100, LCP ${result.performance.metrics.lcp ?? 'indisponible'}, CLS ${result.performance.metrics.cls ?? 'indisponible'}.`
+    : 'PageSpeed : mesure indisponible.';
+  const scores = result.scores
+    .map((item) => `${item.label}: ${item.value}/100 (${item.confidence})`)
+    .join('\n');
+  const findings = result.findings
+    .slice(0, 10)
+    .map(
+      (item, index) =>
+        `${index + 1}. [${item.severity}] ${item.title}\nConstat : ${item.observation}\nCorrection : ${item.fix}`,
+    )
+    .join('\n\n');
+
+  return `Tu es consultant senior en visibilité numérique, SEO et conversion. Analyse cet audit Povira sans inventer de données. Réponds en français avec : 1) une synthèse exécutive, 2) les trois forces, 3) les cinq priorités classées par impact/effort, 4) un plan d'action sur 30 jours, 5) les limites des données disponibles.
+
+Entreprise : ${result.business.name}
+Activité : ${result.business.activity}
+Site : ${result.business.url}
+Collecte : ${result.collectedAt}
+Pages analysées : ${result.pages.length}
+Povira Score : ${result.poviraScore}/100
+
+Scores mesurés :
+${scores}
+
+${performance}
+
+Constats prioritaires :
+${findings}`;
 }

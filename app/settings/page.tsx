@@ -86,6 +86,11 @@ export default function SettingsPage() {
             cette page : l’état passera automatiquement à « Connecté ».
           </p>
         </div>
+        <div className="mt-4 rounded-xl border border-emerald-500/25 bg-emerald-500/[.06] p-4 text-sm leading-6 text-muted-foreground">
+          Sans clé API, lancez un audit puis utilisez « Analyser avec ChatGPT » :
+          Povira copie les mesures et ouvre ChatGPT afin d’utiliser votre
+          abonnement actuel.
+        </div>
       </div>
     </main>
   );
