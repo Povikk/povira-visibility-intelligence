@@ -332,13 +332,22 @@ export default function Home() {
                         </Button>
                       )}
                       <a
-                        href={result ? `/report/${result.id}` : '/report/demo'}
+                        href={`/report/${result.id}/discovery`}
                         className={buttonVariants({
                           variant: 'outline',
                           size: 'lg',
                         })}
                       >
-                        <FileText /> Générer le rapport
+                        <Sparkles /> Rapport découverte
+                      </a>
+                      <a
+                        href={`/report/${result.id}`}
+                        className={buttonVariants({
+                          variant: 'outline',
+                          size: 'lg',
+                        })}
+                      >
+                        <FileText /> Rapport complet
                       </a>
                     </div>
                   </div>
@@ -690,7 +699,6 @@ function WorkspaceSection({
   active: string;
   history: AuditHistoryItem[];
 }) {
-  const [copiedId, setCopiedId] = useState<string | null>(null);
   const businesses = [
     ...new Map(history.map((item) => [item.websiteUrl, item])).values(),
   ];
@@ -700,14 +708,6 @@ function WorkspaceSection({
     Rapports: 'Rapports disponibles',
     Prospects: 'Liens pour vos prospects',
   };
-
-  async function copyReportLink(item: AuditHistoryItem) {
-    await navigator.clipboard.writeText(
-      `${window.location.origin}/report/${item.id}`,
-    );
-    setCopiedId(item.id);
-    window.setTimeout(() => setCopiedId(null), 4_000);
-  }
 
   const rows = active === 'Entreprises' ? businesses : history;
   return (
@@ -725,7 +725,7 @@ function WorkspaceSection({
           {active === 'Rapports' &&
             'Ouvrez les rapports complets générés à partir des données sauvegardées.'}
           {active === 'Prospects' &&
-            'Copiez un lien interne de rapport. Le partage externe restera protégé tant que vous ne l’activez pas.'}
+            'Ouvrez un rapport découverte, téléchargez-le en PDF puis envoyez-le à la personne concernée.'}
         </p>
       </div>
       {rows.length === 0 ? (
@@ -770,18 +770,28 @@ function WorkspaceSection({
                 </a>
               )}
               {(active === 'Audits' || active === 'Rapports') && (
-                <a
-                  href={`/report/${item.id}`}
-                  className={buttonVariants({ variant: 'outline' })}
-                >
-                  Ouvrir le rapport
-                </a>
+                <div className="flex flex-wrap gap-2">
+                  <a
+                    href={`/report/${item.id}/discovery`}
+                    className={buttonVariants({ variant: 'outline' })}
+                  >
+                    Rapport découverte
+                  </a>
+                  <a
+                    href={`/report/${item.id}`}
+                    className={buttonVariants({ variant: 'outline' })}
+                  >
+                    Rapport complet
+                  </a>
+                </div>
               )}
               {active === 'Prospects' && (
-                <Button variant="outline" onClick={() => copyReportLink(item)}>
-                  {copiedId === item.id ? <Check /> : <ArrowRight />}
-                  {copiedId === item.id ? 'Lien copié' : 'Copier le lien'}
-                </Button>
+                <a
+                  href={`/report/${item.id}/discovery`}
+                  className={buttonVariants({ variant: 'outline' })}
+                >
+                  <FileText /> Préparer l’aperçu
+                </a>
               )}
             </article>
           ))}
