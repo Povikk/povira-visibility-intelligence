@@ -1,0 +1,10 @@
+import {describe,expect,it} from 'vitest';
+import {buildFindings,parsePage,scorePages} from './analyzer';
+
+const complete=`<!doctype html><html lang="fr"><head><title>Studio Atlas — Sites performants pour PME</title><meta name="description" content="Création de sites rapides et accessibles pour les entreprises françaises."><meta name="viewport" content="width=device-width"><link rel="canonical" href="https://atlas.example/"><link rel="icon" href="/favicon.svg"><script type="application/ld+json">{}</script></head><body><img class="logo" src="/logo.svg" alt="Studio Atlas"><h1>Un site qui transforme vos visiteurs en clients</h1><p>${'Une expertise numérique utile. '.repeat(180)}</p><a href="/contact">Demander un devis</a><section>FAQ questions fréquentes</section><section>Témoignages de nos clients</section><p>Tarifs à partir de 900 €</p></body></html>`;
+
+describe('analyse HTML déterministe',()=>{
+  it('mesure les balises, contenus, actifs et liens',()=>{const page=parsePage(complete,'https://atlas.example/',200);expect(page.title).toContain('Studio Atlas');expect(page.h1Count).toBe(1);expect(page.schemaCount).toBe(1);expect(page.logo).toBe('https://atlas.example/logo.svg');expect(page.internalLinks).toContain('https://atlas.example/contact');expect(page.hasCta).toBe(true);});
+  it('produit des scores élevés pour une page complète',()=>{const page=parsePage(complete,'https://atlas.example/',200);const scores=scorePages([page],true,true);expect(scores.find((score)=>score.key==='technicalSeo')?.value).toBe(100);expect(scores.find((score)=>score.key==='conversion')?.value).toBeGreaterThanOrEqual(80);});
+  it('crée des constats sourcés pour une page incomplète',()=>{const page=parsePage('<html><body><img src="x.jpg"><p>Bonjour</p></body></html>','http://example.com/',200);const findings=buildFindings([page]);expect(findings.some((item)=>item.title.includes('H1'))).toBe(true);expect(findings.every((item)=>item.sourceUrl==='http://example.com/')).toBe(true);expect(findings.every((item)=>item.evidenceType!=='UNAVAILABLE')).toBe(true);});
+});

@@ -1,6 +1,6 @@
 # Povira
 
-Povira est une plateforme d’analyse de visibilité numérique. La V1 combine une interface d’audit, un scoring reproductible, des recommandations sourcées et un rapport commercial imprimable. Les données fictives sont toujours signalées par **DEMO DATA — POVIRA**.
+Povira est une plateforme d’analyse de visibilité numérique. La V1 explore réellement un site public, mesure son HTML, calcule un score reproductible, sauvegarde l’audit dans D1 et génère un rapport commercial imprimable. Les données fictives sont toujours signalées par **DEMO DATA — POVIRA**.
 
 ## Démarrage
 
@@ -20,6 +20,7 @@ Ouvrir `http://localhost:3000`. Le rapport démo est disponible sur `/report/dem
 - `config/brand.ts` : identité centrale (nom, signature, support, URL).
 - `db/schema.ts` : modèle D1/SQLite normalisé pour workspaces, entreprises, audits, pages, sources, findings, recommandations, scores, concurrents, rapports, jobs et coûts.
 - `lib/scoring.ts` : moteur central de score, versionné et déterministe.
+- `lib/analyzer.ts` : crawler respectueux limité, parsing HTML, mesures et constats.
 - `lib/url-safety.ts` : validation des URLs et première barrière SSRF.
 - `lib/providers.ts` : contrats isolés pour Search, IA, performance et screenshots, plus provider mock.
 
@@ -62,10 +63,12 @@ pnpm build
 
 La validation Zod limite la taille des champs et bloque les protocoles non HTTP(S), identifiants dans l’URL, localhost, réseaux IPv4 privés, IPv6 locales et endpoints metadata connus. Avant un crawler de production, compléter cette barrière par une résolution DNS contrôlée à chaque redirection et une nouvelle vérification de toutes les IP résolues afin de résister au DNS rebinding.
 
-## Limites actuelles
+## Fonctionnement actuel et limites
 
-- Le tableau de bord principal est une démo interactive clairement identifiée.
-- L’API crée une enveloppe de job validée mais le worker de crawl distribué et la persistance des mutations restent à brancher.
+- Le tableau de bord démarre en démo, puis remplace toutes les valeurs par le résultat réel après un audit.
+- L’audit rapide explore jusqu’à 5 pages (10 en mode complet côté API), respecte l’interdiction globale de robots.txt, limite les redirections, la taille des réponses et les URLs au même domaine.
+- Les audits, pages, sources, findings, recommandations et scores sont persistés dans D1 ; un rapport dynamique est accessible par identifiant.
+- L’analyse reste exécutée dans une requête courte. Une file de jobs distribuée avec reprise étape par étape reste la prochaine évolution pour les grands sites.
 - Le PDF repose sur l’impression navigateur ; un renderer serveur et le stockage R2 restent à intégrer.
 - Screenshots, PageSpeed, recherche, avis, réseaux et moteurs IA nécessitent des providers autorisés.
 - Authentification, white-label complet, propositions et monitoring automatique sont préparés au niveau du modèle mais pas encore exposés dans l’interface.
