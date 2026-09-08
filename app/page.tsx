@@ -1,0 +1,70 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { ArrowRight, BarChart3, Building2, Check, ChevronRight, CircleDot, FileText, Gauge, Globe2, LayoutDashboard, Menu, Moon, Plus, Radar, Search, Settings, ShieldCheck, Sparkles, Sun, Target, TrendingUp, X } from 'lucide-react';
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
+import { brand } from '@/config/brand';
+
+const nav = [
+  { label: 'Vue d’ensemble', icon: LayoutDashboard }, { label: 'Entreprises', icon: Building2 },
+  { label: 'Audits', icon: Radar, count: 4 }, { label: 'Rapports', icon: FileText }, { label: 'Prospects', icon: Target },
+];
+const evolution = [{ date: '12 août', score: 52 }, { date: '19 août', score: 58 }, { date: '26 août', score: 64 }, { date: '2 sept.', score: 67 }, { date: '8 sept.', score: 72 }];
+const scoreCards = [
+  { label: 'Visibilité IA', score: 54, delta: '+8', icon: Sparkles, color: '#a78bfa' },
+  { label: 'Recherche', score: 68, delta: '+4', icon: Search, color: '#60a5fa' },
+  { label: 'SEO technique', score: 81, delta: '+2', icon: Gauge, color: '#2dd4bf' },
+  { label: 'Cohérence de marque', score: 72, delta: '+6', icon: CircleDot, color: '#fbbf24' },
+];
+const priorities = [
+  { title: 'Clarifier la proposition de valeur', category: 'Conversion', impact: 'Élevé', effort: 'Moyen', status: 'OBSERVED' },
+  { title: 'Ajouter les données structurées Service', category: 'SEO technique', impact: 'Élevé', effort: 'Faible', status: 'MEASURED' },
+  { title: 'Créer trois pages dédiées aux offres', category: 'Contenu', impact: 'Élevé', effort: 'Moyen', status: 'OBSERVED' },
+  { title: 'Uniformiser le nom de marque sur les profils', category: 'Entité', impact: 'Moyen', effort: 'Faible', status: 'INFERRED' },
+];
+
+export default function Home() {
+  const [dark, setDark] = useState(true); const [mobile, setMobile] = useState(false); const [active, setActive] = useState('Vue d’ensemble');
+  const [running, setRunning] = useState(false); const [progress, setProgress] = useState(0); const [business, setBusiness] = useState('Nova Mapping'); const [url, setUrl] = useState('https://novamapping.example');
+  const runAudit = () => { setRunning(true); setProgress(14); [31, 47, 63, 78, 91, 100].forEach((point, index) => window.setTimeout(() => setProgress(point), 420 * (index + 1))); window.setTimeout(() => setRunning(false), 3150); };
+  const currentStep = useMemo(() => progress < 31 ? 'Découverte' : progress < 47 ? 'Exploration du site' : progress < 63 ? 'Analyse SEO' : progress < 78 ? 'Analyse de marque' : progress < 91 ? 'Calcul des scores' : 'Contrôle qualité', [progress]);
+  useEffect(() => {
+    const context = document.modelContext; if (!context?.registerTool) return;
+    const lifecycle = new AbortController();
+    Promise.resolve(context.registerTool({ name:'start_visibility_audit', title:'Lancer un audit Povira', description:'Lance le même audit rapide que le bouton visible, avec un nom et une URL publique.', inputSchema:{ type:'object', properties:{ business:{type:'string',minLength:1}, url:{type:'string',format:'uri'} }, required:['business','url'], additionalProperties:false }, annotations:{ readOnlyHint:false, untrustedContentHint:true }, execute(input:unknown){ const data=input as {business?:string;url?:string}; if(!data.business || !data.url || !/^https?:\/\//.test(data.url)) throw new Error('Nom et URL HTTP(S) valides requis.'); setBusiness(data.business); setUrl(data.url); runAudit(); return { status:'started', business:data.business, stages:10 }; } }, { signal:lifecycle.signal })).catch(()=>undefined);
+    return () => lifecycle.abort();
+  }, []);
+
+  return <div className={dark ? 'dark' : ''}><div className="min-h-screen bg-background text-foreground">
+    <aside className={`fixed inset-y-0 left-0 z-40 w-[248px] border-r border-border bg-sidebar transition-transform lg:translate-x-0 ${mobile ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div className="flex h-20 items-center justify-between px-6"><Logo /><button className="lg:hidden" onClick={() => setMobile(false)} aria-label="Fermer le menu"><X /></button></div>
+      <nav className="space-y-1 px-3" aria-label="Navigation principale">{nav.map(({ label, icon: Icon, count }) => <button key={label} onClick={() => { setActive(label); setMobile(false); }} className={`nav-item ${active === label ? 'nav-active' : ''}`}><Icon className="size-[18px]"/><span>{label}</span>{count ? <span className="nav-count">{count}</span> : null}</button>)}</nav>
+      <div className="absolute bottom-0 w-full p-3"><button className="nav-item"><Settings className="size-[18px]"/>Paramètres</button><div className="mt-3 flex items-center gap-3 rounded-xl border border-border bg-card p-3"><div className="grid size-9 place-items-center rounded-lg bg-violet-500/15 text-sm font-bold text-violet-400">PS</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">Povik Studio</p><p className="text-xs text-muted-foreground">Workspace Pro</p></div><ChevronRight className="size-4 text-muted-foreground"/></div></div>
+    </aside>
+    <main className="lg:pl-[248px]">
+      <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-border bg-background/80 px-5 backdrop-blur-xl md:px-8"><div className="flex items-center gap-3"><button className="lg:hidden" onClick={() => setMobile(true)} aria-label="Ouvrir le menu"><Menu /></button><div><p className="text-sm text-muted-foreground">Mardi 8 septembre</p><h1 className="text-lg font-semibold">Bonjour, bienvenue sur {brand.name}</h1></div></div><div className="flex items-center gap-2"><button onClick={() => setDark(!dark)} className="icon-button" aria-label="Changer de thème">{dark ? <Sun/> : <Moon/>}</button><NewAuditDialog business={business} setBusiness={setBusiness} url={url} setUrl={setUrl} runAudit={runAudit}/></div></header>
+      <div className="mx-auto max-w-[1500px] p-5 md:p-8">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-4"><div><div className="eyebrow"><span className="pulse-dot"/> Données de démonstration — Povira</div><h2 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">La visibilité de {business}, en un coup d’œil.</h2><p className="mt-1 text-muted-foreground">Dernier audit aujourd’hui à 11:42 · 18 pages analysées</p></div><Link href="/report/demo" className={buttonVariants({variant:'outline',size:'lg'})}><FileText/> Générer le rapport</Link></div>
+        {running && <section className="mb-6 rounded-2xl border border-violet-500/30 bg-violet-500/[.07] p-5" aria-live="polite"><div className="mb-3 flex items-center justify-between"><div><p className="font-medium">Audit de {business} en cours</p><p className="text-sm text-muted-foreground">{currentStep} · chaque module peut reprendre indépendamment</p></div><span className="font-mono text-sm text-violet-400">{progress}%</span></div><Progress value={progress}/></section>}
+        <section className="grid gap-4 xl:grid-cols-[1.7fr_1fr]">
+          <div className="score-hero"><div className="score-orbit" aria-hidden="true"><span>72</span><small>/ 100</small></div><div className="relative z-10 flex min-w-0 flex-1 flex-col justify-center"><div className="eyebrow text-violet-300">Povira Score</div><h3 className="mt-2 text-2xl font-semibold">Une présence solide, encore sous-exploitée.</h3><p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">La base technique est saine. La progression vient surtout d’un positionnement plus explicite et de contenus qui répondent aux recherches commerciales.</p><div className="mt-5 flex flex-wrap gap-3"><span className="result-badge good"><TrendingUp/> +8 points ce mois</span><span className="result-badge"><ShieldCheck/> Confiance élevée</span></div></div></div>
+          <div className="panel min-h-[270px] min-w-0"><div className="panel-heading"><div><p className="panel-title">Évolution</p><p className="panel-subtitle">Povira Score · 30 jours</p></div><span className="trend">+20</span></div><div className="h-[190px] min-h-[190px] min-w-0 pt-4" aria-label="Le score est passé de 52 à 72 en 30 jours"><ResponsiveContainer width="100%" height="100%" minWidth={0}><AreaChart data={evolution} margin={{ left: -26, right: 2 }}><defs><linearGradient id="scoreFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.35}/><stop offset="100%" stopColor="#8b5cf6" stopOpacity={0}/></linearGradient></defs><CartesianGrid vertical={false} stroke="var(--border)"/><XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill:'var(--muted-foreground)', fontSize:11 }}/><YAxis domain={[40,80]} axisLine={false} tickLine={false} tick={{ fill:'var(--muted-foreground)', fontSize:11 }}/><Tooltip contentStyle={{ background:'var(--card)', border:'1px solid var(--border)', borderRadius:12 }}/><Area type="monotone" dataKey="score" stroke="#8b5cf6" strokeWidth={3} fill="url(#scoreFill)"/></AreaChart></ResponsiveContainer></div></div>
+        </section>
+        <section className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{scoreCards.map(({ label, score, delta, icon: Icon, color }) => <article className="metric-card" key={label}><div className="flex items-start justify-between"><span className="metric-icon" style={{ color, background:`${color}18` }}><Icon/></span><span className="delta">{delta}</span></div><div className="mt-5 flex items-end justify-between"><div><p className="text-sm text-muted-foreground">{label}</p><p className="mt-1 text-3xl font-semibold">{score}<span className="text-base text-muted-foreground">/100</span></p></div><div className="mini-bar"><span style={{ height:`${score}%`, background:color }}/></div></div></article>)}</section>
+        <section className="mt-4 grid gap-4 xl:grid-cols-[1.5fr_1fr]">
+          <div className="panel"><div className="panel-heading"><div><p className="panel-title">Priorités à fort impact</p><p className="panel-subtitle">Classées selon impact, effort et applicabilité</p></div><button className="text-sm text-violet-400">Voir les 17 opportunités <ArrowRight className="ml-1 inline size-4"/></button></div><div className="mt-2 divide-y divide-border">{priorities.map((item,i) => <div className="priority-row" key={item.title}><span className="priority-number">0{i+1}</span><div className="min-w-0 flex-1"><p className="font-medium">{item.title}</p><p className="mt-1 text-sm text-muted-foreground">{item.category}</p></div><span className={`data-badge ${item.status.toLowerCase()}`}>{item.status}</span><div className="hidden w-32 sm:block"><p className="text-xs text-muted-foreground">Impact / effort</p><p className="mt-1 text-sm">{item.impact} · {item.effort}</p></div><ChevronRight className="size-4 text-muted-foreground"/></div>)}</div></div>
+          <div className="panel"><div className="panel-heading"><div><p className="panel-title">Couverture des données</p><p className="panel-subtitle">Aucune métrique inventée</p></div><ShieldCheck className="size-5 text-emerald-400"/></div><div className="mt-6 space-y-5"><Coverage label="Mesurées" value={38} color="#2dd4bf"/><Coverage label="Observées" value={31} color="#60a5fa"/><Coverage label="Inférées" value={12} color="#fbbf24"/><Coverage label="Indisponibles" value={19} color="#64748b"/></div><div className="mt-7 rounded-xl border border-border bg-muted/30 p-4"><p className="flex items-center gap-2 text-sm font-medium"><Globe2 className="size-4 text-violet-400"/> Fournisseurs externes</p><p className="mt-2 text-sm leading-6 text-muted-foreground">Recherche, avis et IA : <span className="text-foreground">non configurés</span>. Les scores associés restent indisponibles hors démo.</p></div></div>
+        </section>
+      </div>
+    </main>
+  </div></div>;
+}
+
+function Logo(){return <div className="flex items-center gap-2.5"><span className="logo-mark"><BarChart3/></span><span className="text-xl font-semibold tracking-tight">{brand.name}</span></div>}
+function Coverage({label,value,color}:{label:string;value:number;color:string}){return <div><div className="mb-2 flex justify-between text-sm"><span>{label}</span><span className="font-mono text-muted-foreground">{value}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full" style={{width:`${value}%`,background:color}}/></div></div>}
+function NewAuditDialog({business,setBusiness,url,setUrl,runAudit}:{business:string;setBusiness:(v:string)=>void;url:string;setUrl:(v:string)=>void;runAudit:()=>void}){return <Dialog><DialogTrigger render={<Button size="lg"/>}><Plus/> Nouvel audit</DialogTrigger><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>Lancer un audit rapide</DialogTitle><DialogDescription>Trois informations suffisent. Povira découvrira le reste sans inventer les données manquantes.</DialogDescription></DialogHeader><div className="space-y-4 py-2"><label htmlFor="business-name" className="grid gap-2 text-sm">Nom de l’activité</label><Input id="business-name" value={business} onChange={(e)=>setBusiness(e.target.value)}/><label htmlFor="business-url" className="grid gap-2 text-sm">Présence web principale</label><Input id="business-url" value={url} onChange={(e)=>setUrl(e.target.value)}/><label htmlFor="business-activity" className="grid gap-2 text-sm">Activité</label><Input id="business-activity" defaultValue="Créateur de mappings FiveM"/><div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 p-3 text-xs text-emerald-500"><Check className="size-4"/> URL vérifiée contre les réseaux privés avant exploration.</div></div><Button size="lg" onClick={runAudit}>Lancer Povira Audit <ArrowRight/></Button></DialogContent></Dialog>}
