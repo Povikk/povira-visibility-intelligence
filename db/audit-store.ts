@@ -53,7 +53,7 @@ export async function saveAudit(result: AuditResult) {
         now,
       ),
   ];
-  result.pages.forEach((page) =>
+  result.pages.forEach((page, index) =>
     statements.push(
       db
         .prepare(
@@ -79,6 +79,7 @@ export async function saveAudit(result: AuditResult) {
             logo: page.logo,
             colors: page.colors,
             lang: page.lang,
+            performance: index === 0 ? (result.performance ?? null) : null,
           }),
         ),
     ),

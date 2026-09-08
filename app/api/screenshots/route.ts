@@ -25,6 +25,10 @@ export async function GET(request: Request) {
         viewport: mobile
           ? { width: 390, height: 844 }
           : { width: 1440, height: 900 },
+        gotoOptions: { waitUntil: 'networkidle2', timeout: 15_000 },
+        userAgent: mobile
+          ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+          : undefined,
         screenshotOptions: { type: 'jpeg', quality: 78, fullPage: false },
       }),
       signal: AbortSignal.timeout(30_000),

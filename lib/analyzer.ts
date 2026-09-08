@@ -68,6 +68,11 @@ export type AuditResult = {
   }>;
   persistence: 'saved' | 'unavailable';
 };
+export type AuditProgressUpdate = {
+  progress: number;
+  stage: string;
+  detail: string;
+};
 
 const decode = (value: string) =>
   value
@@ -356,6 +361,71 @@ export function buildFindings(pages: PageAnalysis[]): AuditFinding[] {
     evidenceType: 'MEASURED',
     confidence: 'medium',
   });
+
+  const missingDescriptions = pages.filter((page) => !page.description);
+  add(missingDescriptions.length > 1, {
+    category: 'SEO',
+    severity: 'medium',
+    title: 'Descriptions manquantes sur plusieurs pages',
+    observation: `${missingDescriptions.length} page(s) sur ${pages.length} n’ont pas de meta description.`,
+    whyItMatters:
+      'Des descriptions spécifiques améliorent la compréhension de chaque page dans les résultats de recherche.',
+    fix: 'Rédiger une description unique et fidèle à l’intention de chaque page concernée.',
+    impact: 'medium',
+    effort: 'medium',
+    evidenceType: 'MEASURED',
+    confidence: 'high',
+  });
+
+  const weakHeadings = pages.filter((page) => page.h1Count !== 1);
+  add(weakHeadings.length > 1, {
+    category: 'Contenu',
+    severity: 'high',
+    title: 'Hiérarchie éditoriale irrégulière',
+    observation: `${weakHeadings.length} page(s) sur ${pages.length} n’ont pas exactement un H1.`,
+    whyItMatters:
+      'Une hiérarchie cohérente aide les visiteurs et les moteurs à identifier le sujet principal de chaque page.',
+    fix: 'Définir un H1 descriptif et unique sur chacune des pages concernées.',
+    impact: 'high',
+    effort: 'medium',
+    evidenceType: 'MEASURED',
+    confidence: 'high',
+  });
+
+  const thinPages = pages.filter((page) => page.wordCount < 180);
+  add(thinPages.length > 1, {
+    category: 'Contenu',
+    severity: 'medium',
+    title: 'Contenu limité sur plusieurs pages',
+    observation: `${thinPages.length} page(s) contiennent moins de 180 mots visibles.`,
+    whyItMatters:
+      'Un contenu trop succinct peut laisser des questions importantes sans réponse et limiter la couverture sémantique.',
+    fix: 'Enrichir uniquement les pages qui nécessitent davantage de preuve, de contexte ou de réponses utiles.',
+    impact: 'medium',
+    effort: 'high',
+    evidenceType: 'MEASURED',
+    confidence: 'medium',
+  });
+
+  const titles = pages
+    .map((page) => page.title?.trim().toLowerCase())
+    .filter((title): title is string => Boolean(title));
+  const duplicateTitles = new Set(
+    titles.filter((title, index) => titles.indexOf(title) !== index),
+  );
+  add(duplicateTitles.size > 0, {
+    category: 'SEO',
+    severity: 'medium',
+    title: 'Titres dupliqués entre plusieurs pages',
+    observation: `${duplicateTitles.size} titre(s) identique(s) ont été retrouvés sur plusieurs URL.`,
+    whyItMatters:
+      'Des titres distincts permettent de différencier clairement le rôle et l’intention de chaque page.',
+    fix: 'Attribuer à chaque page un titre spécifique à son contenu et à sa requête cible.',
+    impact: 'medium',
+    effort: 'low',
+    evidenceType: 'MEASURED',
+    confidence: 'high',
+  });
   return all;
 }
 
@@ -438,13 +508,23 @@ function metaLike(page: PageAnalysis) {
   return Boolean(page.description && page.title);
 }
 
-export async function analyzeBusiness(input: {
-  name: string;
-  url: string;
-  activity: string;
-  mode: 'quick' | 'complete';
-}): Promise<AuditResult> {
+export async function analyzeBusiness(
+  input: {
+    name: string;
+    url: string;
+    activity: string;
+    mode: 'quick' | 'complete';
+  },
+  onProgress?: (update: AuditProgressUpdate) => void,
+): Promise<AuditResult> {
   const started = Date.now();
+  const report = (progress: number, stage: string, detail: string) =>
+    onProgress?.({ progress, stage, detail });
+  report(
+    5,
+    'Préparation de l’audit',
+    'Validation de l’adresse et du périmètre.',
+  );
   const root = new URL(assertSafePublicUrl(input.url));
   root.hash = '';
   const collectedAt = new Date().toISOString();
@@ -454,13 +534,18 @@ export async function analyzeBusiness(input: {
     safeFetch(robotsUrl).catch(() => null),
     safeFetch(sitemapUrl).catch(() => null),
   ]);
+  report(
+    16,
+    'Règles d’exploration vérifiées',
+    'Lecture de robots.txt et recherche du sitemap.',
+  );
   const robotsText = robotsResponse?.ok ? await robotsResponse.text() : '';
   const disallowed = robotsText
     .split(/\r?\n/)
     .some((line) => /^disallow:\s*\/$/i.test(line.trim()));
   if (disallowed)
     throw new Error('Le fichier robots.txt interdit l’exploration de ce site.');
-  const limit = input.mode === 'complete' ? 10 : 5;
+  const limit = input.mode === 'complete' ? 15 : 5;
   const queue = [root.href];
   const seen = new Set<string>();
   const pages: PageAnalysis[] = [];
@@ -477,6 +562,11 @@ export async function analyzeBusiness(input: {
       const html = (await response.text()).slice(0, 2_000_000);
       const page = parsePage(html, response.url, response.status);
       pages.push(page);
+      report(
+        Math.min(62, 20 + Math.round((pages.length / limit) * 42)),
+        'Exploration des pages',
+        `${pages.length} page(s) analysée(s) sur un maximum de ${limit}.`,
+      );
       for (const link of page.internalLinks) {
         if (!seen.has(link) && queue.length < limit * 5) queue.push(link);
       }
@@ -486,6 +576,11 @@ export async function analyzeBusiness(input: {
   }
   if (!pages.length)
     throw new Error('Aucune page HTML publique n’a pu être analysée.');
+  report(
+    66,
+    'Analyse du contenu',
+    'Contrôle des balises, textes, images, données structurées et signaux de conversion.',
+  );
   const findings = buildFindings(pages);
   const scores = scorePages(
     pages,
@@ -493,6 +588,11 @@ export async function analyzeBusiness(input: {
     Boolean(sitemapResponse?.ok),
   );
   const aggregate = calculatePoviraScore(scores);
+  report(
+    72,
+    'Calcul des scores',
+    `${findings.length} constat(s) classé(s) par impact et niveau de confiance.`,
+  );
   return {
     id: crypto.randomUUID(),
     business: { name: input.name, activity: input.activity, url: root.href },

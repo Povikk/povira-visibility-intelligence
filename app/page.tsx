@@ -79,6 +79,10 @@ export default function Home() {
   const [activity, setActivity] = useState('');
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [progressStage, setProgressStage] = useState('Préparation de l’audit');
+  const [progressDetail, setProgressDetail] = useState(
+    'Initialisation de l’analyse complète.',
+  );
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AuditResult | null>(null);
   const [chatGptCopied, setChatGptCopied] = useState(false);
@@ -101,41 +105,76 @@ export default function Home() {
   async function audit(payload = { name: business, url, activity }) {
     setRunning(true);
     setError(null);
-    setProgress(8);
-    const timer = window.setInterval(
-      () =>
-        setProgress((value) =>
-          Math.min(value + Math.ceil(Math.random() * 7), 88),
-        ),
-      650,
-    );
+    setProgress(2);
+    setProgressStage('Préparation de l’audit');
+    setProgressDetail('Initialisation de l’analyse complète.');
     try {
       const response = await fetch('/api/audits', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, mode: 'quick' }),
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/x-ndjson',
+        },
+        body: JSON.stringify({ ...payload, mode: 'complete' }),
       });
-      const data = (await response.json()) as
-        | AuditResult
-        | { message?: string };
-      if (!response.ok)
-        throw new Error(
-          'message' in data && data.message
-            ? data.message
-            : 'Audit impossible.',
-        );
-      setResult(data as AuditResult);
+      const contentType = response.headers.get('content-type') ?? '';
+      if (!response.ok || !contentType.includes('application/x-ndjson')) {
+        const data = (await response.json().catch(() => null)) as {
+          message?: string;
+        } | null;
+        throw new Error(data?.message ?? 'Audit impossible.');
+      }
+      if (!response.body) throw new Error('Flux d’analyse indisponible.');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      const streamState: { completed?: AuditResult } = {};
+      const processLine = (line: string) => {
+        if (!line.trim()) return;
+        const event = JSON.parse(line) as
+          | {
+              type: 'progress';
+              progress: number;
+              stage: string;
+              detail: string;
+            }
+          | { type: 'result'; result: AuditResult }
+          | { type: 'error'; message: string };
+        if (event.type === 'progress') {
+          setProgress(event.progress);
+          setProgressStage(event.stage);
+          setProgressDetail(event.detail);
+        } else if (event.type === 'result') {
+          streamState.completed = event.result;
+        } else {
+          throw new Error(event.message);
+        }
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        buffer += decoder.decode(value, { stream: !done });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        lines.forEach(processLine);
+        if (done) break;
+      }
+      processLine(buffer);
+      const completed = streamState.completed;
+      if (!completed) throw new Error('Le rapport final n’a pas été reçu.');
+
+      setResult(completed);
       setBusiness(payload.name);
       setUrl(payload.url);
       setActivity(payload.activity);
       setProgress(100);
-      return data as AuditResult;
+      return completed;
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Audit impossible.');
       throw cause;
     } finally {
-      window.clearInterval(timer);
-      window.setTimeout(() => setRunning(false), 500);
+      window.setTimeout(() => setRunning(false), 900);
     }
   }
 
@@ -300,6 +339,38 @@ export default function Home() {
             </div>
           </header>
           <div className="mx-auto max-w-[1500px] p-5 md:p-8">
+            {active === 'Vue d’ensemble' && running && (
+              <section
+                className="mb-6 rounded-2xl border border-violet-500/30 bg-violet-500/[.07] p-5"
+                aria-live="polite"
+              >
+                <div className="mb-3 flex items-start justify-between gap-6">
+                  <div>
+                    <p className="font-medium">{progressStage}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {progressDetail}
+                    </p>
+                  </div>
+                  <span className="font-mono text-sm text-violet-400">
+                    {progress}%
+                  </span>
+                </div>
+                <Progress value={progress} />
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Analyse approfondie · jusqu’à 15 pages · PageSpeed mobile ·
+                  rapport et recommandations
+                </p>
+              </section>
+            )}
+            {active === 'Vue d’ensemble' && error && (
+              <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-500/25 bg-red-500/10 p-4 text-sm text-red-400">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                <div>
+                  <strong>Audit interrompu.</strong>
+                  <p className="mt-1 text-red-300/80">{error}</p>
+                </div>
+              </div>
+            )}
             {active === 'Vue d’ensemble' ? (
               result ? (
                 <>
@@ -351,37 +422,6 @@ export default function Home() {
                       </a>
                     </div>
                   </div>
-                  {running && (
-                    <section
-                      className="mb-6 rounded-2xl border border-violet-500/30 bg-violet-500/[.07] p-5"
-                      aria-live="polite"
-                    >
-                      <div className="mb-3 flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">
-                            Audit réel de {business} en cours
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Lecture du robots.txt, exploration interne, mesures
-                            et sauvegarde
-                          </p>
-                        </div>
-                        <span className="font-mono text-sm text-violet-400">
-                          {progress}%
-                        </span>
-                      </div>
-                      <Progress value={progress} />
-                    </section>
-                  )}
-                  {error && (
-                    <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-500/25 bg-red-500/10 p-4 text-sm text-red-400">
-                      <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                      <div>
-                        <strong>Audit interrompu.</strong>
-                        <p className="mt-1 text-red-300/80">{error}</p>
-                      </div>
-                    </div>
-                  )}
                   <section className="grid gap-4 xl:grid-cols-[1.7fr_1fr]">
                     <div className="score-hero">
                       <div className="score-orbit">
@@ -657,7 +697,7 @@ export default function Home() {
                           width={390}
                           height={844}
                           unoptimized
-                          className="mx-auto mt-4 max-h-[520px] rounded-xl border border-border"
+                          className="mx-auto mt-4 h-auto w-full max-w-[390px] rounded-xl border border-border"
                         />
                       </div>
                     </section>
@@ -885,8 +925,9 @@ function NewAuditDialog({
         <DialogHeader>
           <DialogTitle>Lancer un audit réel</DialogTitle>
           <DialogDescription>
-            Povira explorera jusqu’à cinq pages publiques, respectera robots.txt
-            et enregistrera les mesures.
+            Povira explorera jusqu’à quinze pages publiques, vérifiera les
+            signaux techniques et éditoriaux, mesurera PageSpeed puis générera
+            les recommandations.
           </DialogDescription>
         </DialogHeader>
         <form className="space-y-4" onSubmit={submit}>
@@ -923,7 +964,7 @@ function NewAuditDialog({
             metadata cloud sont bloquées.
           </div>
           <Button className="w-full" size="lg" type="submit">
-            Analyser maintenant <ArrowRight />
+            Lancer l’analyse complète <ArrowRight />
           </Button>
         </form>
       </DialogContent>

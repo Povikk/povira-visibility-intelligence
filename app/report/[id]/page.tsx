@@ -25,6 +25,7 @@ type ReportData = {
     url: string;
     statusCode: number;
     title: string | null;
+    description: string | null;
     h1Count: number;
     wordCount: number;
     raw: Record<string, unknown>;
@@ -66,6 +67,14 @@ export default function AuditReport({
   }, [params]);
   if (error) return <ReportState message={error} />;
   if (!data) return <ReportState message="Préparation du rapport…" loading />;
+  const performance = readPerformance(data.pages[0]?.raw.performance);
+  const pagesWithDescription = data.pages.filter(
+    (page) => page.description,
+  ).length;
+  const totalWords = data.pages.reduce(
+    (sum, page) => sum + (page.wordCount ?? 0),
+    0,
+  );
   return (
     <main className="report-shell">
       <div className="report-actions print:hidden">
@@ -131,10 +140,61 @@ export default function AuditReport({
           </div>
         </section>
         <section className="report-page">
+          <p className="eyebrow">Performance et couverture</p>
+          <h2>Ce que les mesures racontent</h2>
+          {performance ? (
+            <>
+              <div className="report-grid">
+                <div>
+                  <strong>{performance.performance ?? '—'}</strong>
+                  <span>Performance mobile</span>
+                </div>
+                <div>
+                  <strong>{performance.accessibility ?? '—'}</strong>
+                  <span>Accessibilité</span>
+                </div>
+                <div>
+                  <strong>{performance.bestPractices ?? '—'}</strong>
+                  <span>Bonnes pratiques</span>
+                </div>
+                <div>
+                  <strong>{performance.seo ?? '—'}</strong>
+                  <span>SEO Google</span>
+                </div>
+              </div>
+              <div className="mt-8 grid gap-4 sm:grid-cols-2">
+                <ReportMetric label="LCP" value={performance.metrics.lcp} />
+                <ReportMetric label="FCP" value={performance.metrics.fcp} />
+                <ReportMetric label="TBT" value={performance.metrics.tbt} />
+                <ReportMetric label="CLS" value={performance.metrics.cls} />
+              </div>
+            </>
+          ) : (
+            <div className="notice">
+              <ShieldCheck /> La mesure PageSpeed n’était pas disponible lors de
+              cet audit ; elle n’a pas été estimée artificiellement.
+            </div>
+          )}
+          <div className="mt-10 grid gap-4 sm:grid-cols-3">
+            <ReportMetric
+              label="Pages explorées"
+              value={String(data.pages.length)}
+            />
+            <ReportMetric
+              label="Volume observé"
+              value={`${totalWords.toLocaleString('fr-FR')} mots`}
+            />
+            <ReportMetric
+              label="Descriptions présentes"
+              value={`${pagesWithDescription}/${data.pages.length}`}
+            />
+          </div>
+        </section>
+        <section className="report-page">
           <p className="eyebrow">Plan d’action</p>
           <h2>{data.findings.length} opportunité(s) observée(s)</h2>
           <div className="report-list">
-            {data.findings.slice(0, 6).map((item, index) => (
+            {data.findings.slice(0, 10).map((item, index) => (
               <div key={`${item.title}-${index}`}>
                 <span>0{index + 1}</span>
                 <div>
@@ -178,9 +238,62 @@ export default function AuditReport({
               </div>
             ))}
           </div>
+          <div className="mt-12 rounded-2xl bg-slate-100 p-7">
+            <h3 className="text-xl font-semibold">Périmètre et méthode</h3>
+            <ul className="mt-4 list-disc space-y-2 pl-5 text-sm leading-6 text-slate-600">
+              <li>
+                Exploration des pages publiques accessibles et autorisées.
+              </li>
+              <li>
+                Lecture des balises SEO, contenus, images, données structurées
+                et signaux de conversion.
+              </li>
+              <li>
+                Mesure PageSpeed mobile lorsqu’elle est disponible, sans valeur
+                inventée en cas d’échec.
+              </li>
+              <li>
+                Les données privées, avis externes et moteurs IA ne sont pas
+                inclus sans fournisseur dédié.
+              </li>
+            </ul>
+          </div>
         </section>
       </article>
     </main>
+  );
+}
+
+type PerformanceSnapshot = {
+  performance: number | null;
+  accessibility: number | null;
+  bestPractices: number | null;
+  seo: number | null;
+  metrics: {
+    fcp: string | null;
+    lcp: string | null;
+    tbt: string | null;
+    cls: string | null;
+  };
+};
+
+function readPerformance(value: unknown): PerformanceSnapshot | null {
+  if (!value || typeof value !== 'object' || !('metrics' in value)) return null;
+  return value as PerformanceSnapshot;
+}
+
+function ReportMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number | null;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+      <p className="text-sm text-slate-500">{label}</p>
+      <p className="mt-2 text-2xl font-semibold">{value ?? '—'}</p>
+    </div>
   );
 }
 const labels: Record<string, string> = {
