@@ -2,11 +2,7 @@ import { z } from 'zod';
 import { analyzeBusiness } from '@/lib/analyzer';
 import { safeUrlSchema } from '@/lib/url-safety';
 import { getAuditHistory, saveAudit } from '@/db/audit-store';
-import {
-  integrationStatus,
-  OpenAIInsightsProvider,
-  PageSpeedProvider,
-} from '@/lib/providers';
+import { integrationStatus, PageSpeedProvider } from '@/lib/providers';
 
 const auditRequest = z.object({
   name: z.string().trim().min(1).max(120),
@@ -41,18 +37,6 @@ export async function POST(request: Request) {
         collectedAt: pageSpeed.data.analyzedAt,
         evidenceType: 'MEASURED',
       });
-    }
-    const ai = await new OpenAIInsightsProvider().analyze({
-      business: result.business,
-      scores: result.scores,
-      performance: result.performance ?? null,
-      findings: result.findings
-        .slice(0, 10)
-        .map(({ title, observation, fix }) => ({ title, observation, fix })),
-    });
-    if (ai.status === 'available' && ai.data) {
-      result.aiInsights = ai.data;
-      result.providers.ai = 'available';
     }
     if (integrationStatus().screenshots.status === 'connected') {
       result.providers.screenshots = 'available';

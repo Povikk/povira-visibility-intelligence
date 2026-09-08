@@ -1,6 +1,6 @@
 import { assertSafePublicUrl } from './url-safety';
 import { calculatePoviraScore, type ScoreInput } from './scoring';
-import type { AIInsights, PageSpeedData } from './providers';
+import type { PageSpeedData } from './providers';
 
 export type EvidenceType = 'MEASURED' | 'OBSERVED' | 'INFERRED' | 'UNAVAILABLE';
 export type AuditFinding = {
@@ -53,11 +53,9 @@ export type AuditResult = {
   robots: { available: boolean; allowed: boolean };
   sitemap: { available: boolean };
   performance?: PageSpeedData;
-  aiInsights?: AIInsights;
   screenshots?: { desktop: string; mobile: string };
   providers: {
     search: 'unavailable';
-    ai: 'available' | 'unavailable';
     performance: 'available' | 'unavailable';
     reputation: 'unavailable';
     screenshots: 'available' | 'unavailable';
@@ -509,7 +507,6 @@ export async function analyzeBusiness(input: {
     sitemap: { available: Boolean(sitemapResponse?.ok) },
     providers: {
       search: 'unavailable',
-      ai: 'unavailable',
       performance: 'unavailable',
       reputation: 'unavailable',
       screenshots: 'unavailable',

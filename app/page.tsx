@@ -636,8 +636,8 @@ export default function Home() {
                       </p>
                       <p className="mt-2 text-sm leading-6 text-muted-foreground">
                         {result
-                          ? `PageSpeed ${result.providers.performance === 'available' ? 'actif' : 'indisponible'} · IA ${result.providers.ai === 'available' ? 'active' : 'non configurée'} · captures ${result.providers.screenshots === 'available' ? 'actives' : 'non configurées'}`
-                          : 'Les connexions sont contrôlables depuis Paramètres.'}
+                          ? `PageSpeed gratuit ${result.providers.performance === 'available' ? 'actif' : 'indisponible'} · ChatGPT manuel actif · captures Cloudflare ${result.providers.screenshots === 'available' ? 'actives' : 'à configurer'}`
+                          : 'Audit interne, PageSpeed gratuit et ChatGPT manuel.'}
                       </p>
                     </div>
                     {result?.performance && (
@@ -658,16 +658,6 @@ export default function Home() {
                           label="CLS"
                           value={result.performance.metrics.cls}
                         />
-                      </div>
-                    )}
-                    {result?.aiInsights && (
-                      <div className="mt-4 rounded-xl border border-violet-500/25 bg-violet-500/[.06] p-4">
-                        <p className="text-sm font-medium text-violet-300">
-                          Synthèse IA
-                        </p>
-                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                          {result.aiInsights.summary}
-                        </p>
                       </div>
                     )}
                     {result && (

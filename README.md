@@ -22,7 +22,7 @@ Ouvrir `http://localhost:3000`. Le rapport démo est disponible sur `/report/dem
 - `lib/scoring.ts` : moteur central de score, versionné et déterministe.
 - `lib/analyzer.ts` : crawler respectueux limité, parsing HTML, mesures et constats.
 - `lib/url-safety.ts` : validation des URLs et première barrière SSRF.
-- `lib/providers.ts` : intégrations serveur Google PageSpeed et OpenAI, avec états de configuration explicites.
+- `lib/providers.ts` : intégration Google PageSpeed sans clé et état des captures Cloudflare.
 
 Le pipeline cible les étapes `DISCOVERY → CRAWLING → SEO → BRAND → SEARCH → AI → COMPETITORS → ANALYSIS → SCORING → REPORT`. Chaque étape est stockée comme un job indépendant afin qu’une erreur partielle n’annule pas tout l’audit.
 
@@ -44,7 +44,7 @@ Pour ajouter une métrique, ajouter sa mesure déterministe dans l’analyseur c
 
 ## Providers
 
-Google PageSpeed Insights fonctionne sans clé avec le quota public ; `PAGESPEED_API_KEY` augmente la fiabilité pour un usage automatisé. La synthèse OpenAI utilise `OPENAI_API_KEY` et éventuellement `OPENAI_MODEL`. Les captures ordinateur/mobile passent par Cloudflare Browser Rendering avec `CLOUDFLARE_ACCOUNT_ID` et `CLOUDFLARE_BROWSER_RENDERING_TOKEN`.
+Google PageSpeed Insights fonctionne sans clé avec le quota public. Les analyses approfondies sont transférées manuellement vers ChatGPT grâce au bouton dédié, sans appel à l’API OpenAI. Les captures ordinateur/mobile passent par Cloudflare Browser Rendering avec `CLOUDFLARE_ACCOUNT_ID` et `CLOUDFLARE_BROWSER_RENDERING_TOKEN`, compatibles avec son quota gratuit.
 
 La page `/settings` affiche l’état de chaque connexion sans jamais révéler les secrets. Une intégration absente retourne `unavailable` et aucune valeur de remplacement n’est inventée.
 
@@ -70,5 +70,5 @@ La validation Zod limite la taille des champs et bloque les protocoles non HTTP(
 - Les audits, pages, sources, findings, recommandations et scores sont persistés dans D1 ; un rapport dynamique est accessible par identifiant.
 - L’analyse reste exécutée dans une requête courte. Une file de jobs distribuée avec reprise étape par étape reste la prochaine évolution pour les grands sites.
 - Le PDF repose sur l’impression navigateur ; un renderer serveur et le stockage R2 restent à intégrer.
-- PageSpeed est branché. OpenAI et les captures Cloudflare s’activent automatiquement dès que leurs secrets serveur sont configurés. Recherche, avis et réseaux restent hors périmètre de cette version.
+- PageSpeed est branché sans clé et ChatGPT fonctionne par transfert manuel. Les captures Cloudflare s’activent automatiquement dès que les deux identifiants serveur sont configurés. Recherche, avis et réseaux restent hors périmètre de cette version.
 - Authentification, white-label complet, propositions et monitoring automatique sont préparés au niveau du modèle mais pas encore exposés dans l’interface.

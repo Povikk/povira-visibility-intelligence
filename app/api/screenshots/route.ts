@@ -13,24 +13,31 @@ export async function GET(request: Request) {
     );
   try {
     const url = assertSafePublicUrl(raw);
-    const response = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/browser-rendering/screenshot`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${env.CLOUDFLARE_BROWSER_RENDERING_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          url,
-          viewport: mobile
-            ? { width: 390, height: 844 }
-            : { width: 1440, height: 900 },
-          screenshotOptions: { type: 'jpeg', quality: 78, fullPage: false },
-        }),
-        signal: AbortSignal.timeout(30_000),
+    const endpoint = `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/browser-rendering/screenshot`;
+    const options: RequestInit = {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.CLOUDFLARE_BROWSER_RENDERING_TOKEN}`,
+        'Content-Type': 'application/json',
       },
-    );
+      body: JSON.stringify({
+        url,
+        viewport: mobile
+          ? { width: 390, height: 844 }
+          : { width: 1440, height: 900 },
+        screenshotOptions: { type: 'jpeg', quality: 78, fullPage: false },
+      }),
+      signal: AbortSignal.timeout(30_000),
+    };
+    let response = await fetch(endpoint, options);
+    if (response.status === 429) {
+      const retryAfter = Math.min(
+        12,
+        Math.max(2, Number(response.headers.get('retry-after') ?? 10)),
+      );
+      await new Promise((resolve) => setTimeout(resolve, retryAfter * 1_000));
+      response = await fetch(endpoint, options);
+    }
     if (!response.ok)
       return Response.json(
         { error: 'SCREENSHOT_FAILED', status: response.status },

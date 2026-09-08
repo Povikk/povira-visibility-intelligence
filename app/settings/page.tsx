@@ -6,13 +6,13 @@ import {
   CheckCircle2,
   Gauge,
   Image,
-  KeyRound,
-  Sparkles,
+  Leaf,
+  MessageCircle,
   XCircle,
 } from 'lucide-react';
 
 type Item = { status: string; label: string; missing: string[] };
-type Status = { pagespeed: Item; openai: Item; screenshots: Item };
+type Status = { pagespeed: Item; screenshots: Item };
 
 export default function SettingsPage() {
   const [data, setData] = useState<Status | null>(null);
@@ -34,14 +34,15 @@ export default function SettingsPage() {
         </a>
         <div className="mt-8">
           <p className="eyebrow">
-            <KeyRound className="size-4" /> Connexions sécurisées
+            <Leaf className="size-4" /> MODE SANS API PAYANTE
           </p>
           <h1 className="mt-3 text-3xl font-semibold">
-            Paramètres des fournisseurs
+            Outils gratuits et inclus
           </h1>
           <p className="mt-2 max-w-2xl text-muted-foreground">
-            Les secrets sont lus uniquement côté serveur. Cette page ne les
-            affiche jamais et indique précisément ce qu’il reste à configurer.
+            Povira utilise son analyse interne, PageSpeed sans clé et votre
+            accès ChatGPT manuel. Seules les captures Cloudflare demandent un
+            compte et un jeton, compatibles avec l’offre gratuite.
           </p>
         </div>
         <div className="mt-8 grid gap-4">
@@ -54,16 +55,20 @@ export default function SettingsPage() {
                 description="Mesure mobile réelle : performance, accessibilité, bonnes pratiques, SEO et Core Web Vitals."
               />
               <ProviderCard
-                icon={Sparkles}
-                name="OpenAI"
-                item={data.openai}
-                description="Produit une synthèse factuelle en français à partir des mesures collectées, sans inventer de score."
+                icon={MessageCircle}
+                name="ChatGPT manuel"
+                item={{
+                  status: 'ready',
+                  label: 'Sans clé API ni coût API',
+                  missing: [],
+                }}
+                description="Le bouton Analyser avec ChatGPT copie l’audit et ouvre votre compte ChatGPT actuel."
               />
               <ProviderCard
                 icon={Image}
-                name="Cloudflare Browser Rendering"
+                name="Cloudflare Browser Rendering — gratuit"
                 item={data.screenshots}
-                description="Génère à la demande les aperçus ordinateur et mobile du site audité."
+                description="Génère les aperçus ordinateur et mobile dans la limite du quota gratuit Cloudflare."
               />
             </>
           ) : (
@@ -71,25 +76,21 @@ export default function SettingsPage() {
           )}
         </div>
         <div className="panel mt-6">
-          <h2 className="panel-title">
-            Variables à configurer dans l’hébergement
-          </h2>
+          <h2 className="panel-title">Captures Cloudflare gratuites</h2>
           <div className="mt-4 grid gap-2 font-mono text-sm text-muted-foreground">
-            <code>PAGESPEED_API_KEY (optionnelle)</code>
-            <code>OPENAI_API_KEY</code>
-            <code>OPENAI_MODEL (optionnelle, défaut : gpt-5.4-mini)</code>
             <code>CLOUDFLARE_ACCOUNT_ID</code>
             <code>CLOUDFLARE_BROWSER_RENDERING_TOKEN</code>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
-            Une fois les variables enregistrées et le site redéployé, rechargez
-            cette page : l’état passera automatiquement à « Connecté ».
+            Aucun moyen de paiement OpenAI n’est nécessaire. Une fois les deux
+            identifiants Cloudflare enregistrés, les captures ordinateur et
+            mobile s’activeront automatiquement.
           </p>
         </div>
         <div className="mt-4 rounded-xl border border-emerald-500/25 bg-emerald-500/[.06] p-4 text-sm leading-6 text-muted-foreground">
-          Sans clé API, lancez un audit puis utilisez « Analyser avec ChatGPT » :
-          Povira copie les mesures et ouvre ChatGPT afin d’utiliser votre
-          abonnement actuel.
+          Lancez un audit puis utilisez « Analyser avec ChatGPT » : Povira copie
+          les mesures et ouvre ChatGPT afin d’utiliser votre abonnement actuel,
+          sans appel à l’API OpenAI.
         </div>
       </div>
     </main>
