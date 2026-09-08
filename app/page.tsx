@@ -115,6 +115,13 @@ const scoreIcons = {
   local: Target,
 };
 const scoreColors = ['#2dd4bf', '#60a5fa', '#fbbf24', '#a78bfa'];
+type AuditHistoryItem = {
+  id: string;
+  completedAt: number;
+  name: string;
+  websiteUrl: string;
+  score: number | null;
+};
 
 export default function Home() {
   const [dark, setDark] = useState(true);
@@ -128,6 +135,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AuditResult | null>(null);
   const [chatGptCopied, setChatGptCopied] = useState(false);
+  const [history, setHistory] = useState<AuditHistoryItem[]>([]);
 
   async function analyzeWithChatGPT() {
     if (!result) return;
@@ -138,7 +146,7 @@ export default function Home() {
       window.setTimeout(() => setChatGptCopied(false), 8_000);
     } catch {
       setError(
-        "Le navigateur n’a pas autorisé la copie. Réessayez depuis une fenêtre sécurisée.",
+        'Le navigateur n’a pas autorisé la copie. Réessayez depuis une fenêtre sécurisée.',
       );
     }
   }
@@ -232,17 +240,25 @@ export default function Home() {
     return () => lifecycle.abort();
   }, []);
 
+  useEffect(() => {
+    fetch('/api/audits')
+      .then(
+        (response) =>
+          response.json() as Promise<{ audits: AuditHistoryItem[] }>,
+      )
+      .then((data) => setHistory(data.audits ?? []))
+      .catch(() => setHistory([]));
+  }, [result?.id]);
+
   const displayScores = useMemo(
     () =>
       result
-        ? result.scores
-            .slice(0, 4)
-            .map((item, index) => ({
-              ...item,
-              score: item.value,
-              icon: scoreIcons[item.key],
-              color: scoreColors[index],
-            }))
+        ? result.scores.slice(0, 4).map((item, index) => ({
+            ...item,
+            score: item.value,
+            icon: scoreIcons[item.key],
+            color: scoreColors[index],
+          }))
         : demoScores.map((item) => ({ ...item, score: item.value })),
     [result],
   );
@@ -288,13 +304,16 @@ export default function Home() {
                 <span>{label}</span>
               </button>
             ))}
+            <a
+              href="/settings"
+              className="nav-item mt-3 border-t border-border pt-4"
+            >
+              <Settings className="size-[18px]" />
+              Configuration
+            </a>
           </nav>
           <div className="absolute bottom-0 w-full p-3">
-            <a href="/settings" className="nav-item">
-              <Settings className="size-[18px]" />
-              Paramètres
-            </a>
-            <div className="mt-3 flex items-center gap-3 rounded-xl border border-border bg-card p-3">
+            <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-3">
               <div className="grid size-9 place-items-center rounded-lg bg-violet-500/15 text-sm font-bold text-violet-400">
                 PS
               </div>
@@ -342,339 +361,474 @@ export default function Home() {
             </div>
           </header>
           <div className="mx-auto max-w-[1500px] p-5 md:p-8">
-            <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <div className="eyebrow">
-                  <span
-                    className={`pulse-dot ${result ? '!bg-emerald-400' : ''}`}
-                  />{' '}
-                  {result
-                    ? 'Audit réel mesuré'
-                    : 'Données de démonstration — Povira'}
-                </div>
-                <h2 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
-                  La visibilité de {business}, en un coup d’œil.
-                </h2>
-                <p className="mt-1 text-muted-foreground">
-                  {result
-                    ? `Collecté ${new Date(result.collectedAt).toLocaleString('fr-FR')} · ${pages} pages analysées · ${(result.durationMs / 1000).toFixed(1)} s`
-                    : `Exemple interactif · ${pages} pages simulées`}
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                {result && (
-                  <Button size="lg" onClick={analyzeWithChatGPT}>
-                    {chatGptCopied ? <Check /> : <MessageCircle />}
-                    {chatGptCopied
-                      ? 'Copié — collez dans ChatGPT'
-                      : 'Analyser avec ChatGPT'}
-                  </Button>
-                )}
-                <a
-                  href={result ? `/report/${result.id}` : '/report/demo'}
-                  className={buttonVariants({ variant: 'outline', size: 'lg' })}
-                >
-                  <FileText /> Générer le rapport
-                </a>
-              </div>
-            </div>
-            {running && (
-              <section
-                className="mb-6 rounded-2xl border border-violet-500/30 bg-violet-500/[.07] p-5"
-                aria-live="polite"
-              >
-                <div className="mb-3 flex items-center justify-between">
+            {active === 'Vue d’ensemble' ? (
+              <>
+                <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
                   <div>
-                    <p className="font-medium">
-                      Audit réel de {business} en cours
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Lecture du robots.txt, exploration interne, mesures et
-                      sauvegarde
-                    </p>
-                  </div>
-                  <span className="font-mono text-sm text-violet-400">
-                    {progress}%
-                  </span>
-                </div>
-                <Progress value={progress} />
-              </section>
-            )}
-            {error && (
-              <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-500/25 bg-red-500/10 p-4 text-sm text-red-400">
-                <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                <div>
-                  <strong>Audit interrompu.</strong>
-                  <p className="mt-1 text-red-300/80">{error}</p>
-                </div>
-              </div>
-            )}
-            <section className="grid gap-4 xl:grid-cols-[1.7fr_1fr]">
-              <div className="score-hero">
-                <div className="score-orbit">
-                  <span>{mainScore}</span>
-                  <small>/ 100</small>
-                </div>
-                <div className="relative z-10 flex min-w-0 flex-1 flex-col justify-center">
-                  <div className="eyebrow text-violet-300">
-                    Povira Score · méthode {result?.scoreVersion ?? 'démo'}
-                  </div>
-                  <h3 className="mt-2 text-2xl font-semibold">
-                    {scoreSummary(mainScore)}
-                  </h3>
-                  <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">
-                    {result
-                      ? 'Score calculé uniquement à partir du HTML réellement collecté. Les dimensions sans fournisseur configuré sont exclues.'
-                      : 'Lancez un audit pour remplacer toutes les données simulées par les mesures du site saisi.'}
-                  </p>
-                  <div className="mt-5 flex flex-wrap gap-3">
-                    <span className="result-badge good">
-                      <ShieldCheck />{' '}
-                      {result ? 'Mesures sauvegardées' : 'Mode démonstration'}
-                    </span>
-                    <span className="result-badge">
-                      <Globe2 /> {result ? result.business.url : 'example.com'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="panel">
-                <div className="panel-heading">
-                  <div>
-                    <p className="panel-title">Éléments découverts</p>
-                    <p className="panel-subtitle">Page principale</p>
-                  </div>
-                  <span className="trend">{result ? 'LIVE' : 'DEMO'}</span>
-                </div>
-                <div className="mt-6 space-y-4 text-sm">
-                  <Fact
-                    label="Titre"
-                    value={
-                      result?.pages[0]?.title ??
-                      'Nova Mapping — Univers FiveM sur mesure'
-                    }
-                  />
-                  <Fact
-                    label="H1"
-                    value={
-                      result
-                        ? `${result.pages[0].h1Count} détecté(s)`
-                        : '1 détecté'
-                    }
-                  />
-                  <Fact
-                    label="Schema.org"
-                    value={
-                      result
-                        ? `${result.pages[0].schemaCount} bloc(s)`
-                        : '1 bloc'
-                    }
-                  />
-                  <Fact
-                    label="Images sans alt"
-                    value={
-                      result
-                        ? `${result.pages[0].imagesWithoutAlt} / ${result.pages[0].imageCount}`
-                        : '2 / 14'
-                    }
-                  />
-                  <Fact
-                    label="Sitemap"
-                    value={
-                      result
-                        ? result.sitemap.available
-                          ? 'Détecté'
-                          : 'Non trouvé'
-                        : 'Détecté'
-                    }
-                  />
-                </div>
-              </div>
-            </section>
-            <section className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {displayScores.map(({ label, score, icon: Icon, color, key }) => (
-                <article className="metric-card" key={key}>
-                  <span
-                    className="metric-icon"
-                    style={{ color, background: `${color}18` }}
-                  >
-                    <Icon />
-                  </span>
-                  <div className="mt-5 flex items-end justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">{label}</p>
-                      <p className="mt-1 text-3xl font-semibold">
-                        {score}
-                        <span className="text-base text-muted-foreground">
-                          /100
-                        </span>
-                      </p>
-                    </div>
-                    <div className="mini-bar">
+                    <div className="eyebrow">
                       <span
-                        style={{ height: `${score}%`, background: color }}
+                        className={`pulse-dot ${result ? '!bg-emerald-400' : ''}`}
+                      />{' '}
+                      {result
+                        ? 'Audit réel mesuré'
+                        : 'Données de démonstration — Povira'}
+                    </div>
+                    <h2 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
+                      La visibilité de {business}, en un coup d’œil.
+                    </h2>
+                    <p className="mt-1 text-muted-foreground">
+                      {result
+                        ? `Collecté ${new Date(result.collectedAt).toLocaleString('fr-FR')} · ${pages} pages analysées · ${(result.durationMs / 1000).toFixed(1)} s`
+                        : `Exemple interactif · ${pages} pages simulées`}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    {result && (
+                      <Button size="lg" onClick={analyzeWithChatGPT}>
+                        {chatGptCopied ? <Check /> : <MessageCircle />}
+                        {chatGptCopied
+                          ? 'Copié — collez dans ChatGPT'
+                          : 'Analyser avec ChatGPT'}
+                      </Button>
+                    )}
+                    <a
+                      href={result ? `/report/${result.id}` : '/report/demo'}
+                      className={buttonVariants({
+                        variant: 'outline',
+                        size: 'lg',
+                      })}
+                    >
+                      <FileText /> Générer le rapport
+                    </a>
+                  </div>
+                </div>
+                {running && (
+                  <section
+                    className="mb-6 rounded-2xl border border-violet-500/30 bg-violet-500/[.07] p-5"
+                    aria-live="polite"
+                  >
+                    <div className="mb-3 flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">
+                          Audit réel de {business} en cours
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Lecture du robots.txt, exploration interne, mesures et
+                          sauvegarde
+                        </p>
+                      </div>
+                      <span className="font-mono text-sm text-violet-400">
+                        {progress}%
+                      </span>
+                    </div>
+                    <Progress value={progress} />
+                  </section>
+                )}
+                {error && (
+                  <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-500/25 bg-red-500/10 p-4 text-sm text-red-400">
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                    <div>
+                      <strong>Audit interrompu.</strong>
+                      <p className="mt-1 text-red-300/80">{error}</p>
+                    </div>
+                  </div>
+                )}
+                <section className="grid gap-4 xl:grid-cols-[1.7fr_1fr]">
+                  <div className="score-hero">
+                    <div className="score-orbit">
+                      <span>{mainScore}</span>
+                      <small>/ 100</small>
+                    </div>
+                    <div className="relative z-10 flex min-w-0 flex-1 flex-col justify-center">
+                      <div className="eyebrow text-violet-300">
+                        Povira Score · méthode {result?.scoreVersion ?? 'démo'}
+                      </div>
+                      <h3 className="mt-2 text-2xl font-semibold">
+                        {scoreSummary(mainScore)}
+                      </h3>
+                      <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">
+                        {result
+                          ? 'Score calculé uniquement à partir du HTML réellement collecté. Les dimensions sans fournisseur configuré sont exclues.'
+                          : 'Lancez un audit pour remplacer toutes les données simulées par les mesures du site saisi.'}
+                      </p>
+                      <div className="mt-5 flex flex-wrap gap-3">
+                        <span className="result-badge good">
+                          <ShieldCheck />{' '}
+                          {result
+                            ? 'Mesures sauvegardées'
+                            : 'Mode démonstration'}
+                        </span>
+                        <span className="result-badge">
+                          <Globe2 />{' '}
+                          {result ? result.business.url : 'example.com'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="panel">
+                    <div className="panel-heading">
+                      <div>
+                        <p className="panel-title">Éléments découverts</p>
+                        <p className="panel-subtitle">Page principale</p>
+                      </div>
+                      <span className="trend">{result ? 'LIVE' : 'DEMO'}</span>
+                    </div>
+                    <div className="mt-6 space-y-4 text-sm">
+                      <Fact
+                        label="Titre"
+                        value={
+                          result?.pages[0]?.title ??
+                          'Nova Mapping — Univers FiveM sur mesure'
+                        }
+                      />
+                      <Fact
+                        label="H1"
+                        value={
+                          result
+                            ? `${result.pages[0].h1Count} détecté(s)`
+                            : '1 détecté'
+                        }
+                      />
+                      <Fact
+                        label="Schema.org"
+                        value={
+                          result
+                            ? `${result.pages[0].schemaCount} bloc(s)`
+                            : '1 bloc'
+                        }
+                      />
+                      <Fact
+                        label="Images sans alt"
+                        value={
+                          result
+                            ? `${result.pages[0].imagesWithoutAlt} / ${result.pages[0].imageCount}`
+                            : '2 / 14'
+                        }
+                      />
+                      <Fact
+                        label="Sitemap"
+                        value={
+                          result
+                            ? result.sitemap.available
+                              ? 'Détecté'
+                              : 'Non trouvé'
+                            : 'Détecté'
+                        }
                       />
                     </div>
                   </div>
-                </article>
-              ))}
-            </section>
-            <section className="mt-4 grid gap-4 xl:grid-cols-[1.5fr_1fr]">
-              <div className="panel">
-                <div className="panel-heading">
-                  <div>
-                    <p className="panel-title">Priorités issues de l’audit</p>
-                    <p className="panel-subtitle">
-                      Constat, impact et correction
-                    </p>
-                  </div>
-                  <span className="text-sm text-violet-400">
-                    {result?.findings.length ?? 17} opportunités
-                  </span>
-                </div>
-                <div className="mt-2 divide-y divide-border">
-                  {displayPriorities.map((item, index) => (
-                    <div className="priority-row" key={item.title}>
-                      <span className="priority-number">0{index + 1}</span>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium">{item.title}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {item.category}
-                          {'observation' in item
-                            ? ` · ${String(item.observation)}`
-                            : ''}
+                </section>
+                <section className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                  {displayScores.map(
+                    ({ label, score, icon: Icon, color, key }) => (
+                      <article className="metric-card" key={key}>
+                        <span
+                          className="metric-icon"
+                          style={{ color, background: `${color}18` }}
+                        >
+                          <Icon />
+                        </span>
+                        <div className="mt-5 flex items-end justify-between">
+                          <div>
+                            <p className="text-sm text-muted-foreground">
+                              {label}
+                            </p>
+                            <p className="mt-1 text-3xl font-semibold">
+                              {score}
+                              <span className="text-base text-muted-foreground">
+                                /100
+                              </span>
+                            </p>
+                          </div>
+                          <div className="mini-bar">
+                            <span
+                              style={{ height: `${score}%`, background: color }}
+                            />
+                          </div>
+                        </div>
+                      </article>
+                    ),
+                  )}
+                </section>
+                <section className="mt-4 grid gap-4 xl:grid-cols-[1.5fr_1fr]">
+                  <div className="panel">
+                    <div className="panel-heading">
+                      <div>
+                        <p className="panel-title">
+                          Priorités issues de l’audit
+                        </p>
+                        <p className="panel-subtitle">
+                          Constat, impact et correction
                         </p>
                       </div>
-                      <span
-                        className={`data-badge ${item.evidenceType.toLowerCase()}`}
-                      >
-                        {item.evidenceType}
+                      <span className="text-sm text-violet-400">
+                        {result?.findings.length ?? 17} opportunités
                       </span>
-                      <div className="hidden w-32 sm:block">
-                        <p className="text-xs text-muted-foreground">
-                          Impact / effort
-                        </p>
-                        <p className="mt-1 text-sm">
-                          {translate(item.impact)} · {translate(item.effort)}
+                    </div>
+                    <div className="mt-2 divide-y divide-border">
+                      {displayPriorities.map((item, index) => (
+                        <div className="priority-row" key={item.title}>
+                          <span className="priority-number">0{index + 1}</span>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium">{item.title}</p>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {item.category}
+                              {'observation' in item
+                                ? ` · ${String(item.observation)}`
+                                : ''}
+                            </p>
+                          </div>
+                          <span
+                            className={`data-badge ${item.evidenceType.toLowerCase()}`}
+                          >
+                            {item.evidenceType}
+                          </span>
+                          <div className="hidden w-32 sm:block">
+                            <p className="text-xs text-muted-foreground">
+                              Impact / effort
+                            </p>
+                            <p className="mt-1 text-sm">
+                              {translate(item.impact)} ·{' '}
+                              {translate(item.effort)}
+                            </p>
+                          </div>
+                          <ChevronRight className="size-4 text-muted-foreground" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="panel">
+                    <div className="panel-heading">
+                      <div>
+                        <p className="panel-title">Sources et disponibilité</p>
+                        <p className="panel-subtitle">
+                          Transparence des données
                         </p>
                       </div>
-                      <ChevronRight className="size-4 text-muted-foreground" />
+                      <ShieldCheck className="size-5 text-emerald-400" />
                     </div>
-                  ))}
-                </div>
-              </div>
-              <div className="panel">
-                <div className="panel-heading">
-                  <div>
-                    <p className="panel-title">Sources et disponibilité</p>
-                    <p className="panel-subtitle">Transparence des données</p>
+                    <div className="mt-6 space-y-4">
+                      <Coverage
+                        label="Pages mesurées"
+                        value={result ? 100 : 38}
+                        color="#2dd4bf"
+                      />
+                      <Coverage
+                        label="Données observées"
+                        value={
+                          result
+                            ? Math.round(
+                                (result.findings.filter(
+                                  (item) => item.evidenceType === 'OBSERVED',
+                                ).length /
+                                  Math.max(1, result.findings.length)) *
+                                  100,
+                              )
+                            : 31
+                        }
+                        color="#60a5fa"
+                      />
+                    </div>
+                    <div className="mt-7 rounded-xl border border-border bg-muted/30 p-4">
+                      <p className="flex items-center gap-2 text-sm font-medium">
+                        <Globe2 className="size-4 text-violet-400" />{' '}
+                        Fournisseurs externes
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                        {result
+                          ? `PageSpeed ${result.providers.performance === 'available' ? 'actif' : 'indisponible'} · IA ${result.providers.ai === 'available' ? 'active' : 'non configurée'} · captures ${result.providers.screenshots === 'available' ? 'actives' : 'non configurées'}`
+                          : 'Les connexions sont contrôlables depuis Paramètres.'}
+                      </p>
+                    </div>
+                    {result?.performance && (
+                      <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                        <Fact
+                          label="Performance"
+                          value={`${result.performance.performance ?? '—'}/100`}
+                        />
+                        <Fact
+                          label="LCP"
+                          value={result.performance.metrics.lcp}
+                        />
+                        <Fact
+                          label="SEO Google"
+                          value={`${result.performance.seo ?? '—'}/100`}
+                        />
+                        <Fact
+                          label="CLS"
+                          value={result.performance.metrics.cls}
+                        />
+                      </div>
+                    )}
+                    {result?.aiInsights && (
+                      <div className="mt-4 rounded-xl border border-violet-500/25 bg-violet-500/[.06] p-4">
+                        <p className="text-sm font-medium text-violet-300">
+                          Synthèse IA
+                        </p>
+                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                          {result.aiInsights.summary}
+                        </p>
+                      </div>
+                    )}
+                    {result && (
+                      <div className="mt-4 max-h-36 space-y-2 overflow-auto">
+                        {result.sources.map((source) => (
+                          <a
+                            key={source.url}
+                            href={source.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block truncate text-xs text-violet-400"
+                          >
+                            {source.url}
+                          </a>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <ShieldCheck className="size-5 text-emerald-400" />
-                </div>
-                <div className="mt-6 space-y-4">
-                  <Coverage
-                    label="Pages mesurées"
-                    value={result ? 100 : 38}
-                    color="#2dd4bf"
-                  />
-                  <Coverage
-                    label="Données observées"
-                    value={
-                      result
-                        ? Math.round(
-                            (result.findings.filter(
-                              (item) => item.evidenceType === 'OBSERVED',
-                            ).length /
-                              Math.max(1, result.findings.length)) *
-                              100,
-                          )
-                        : 31
-                    }
-                    color="#60a5fa"
-                  />
-                </div>
-                <div className="mt-7 rounded-xl border border-border bg-muted/30 p-4">
-                  <p className="flex items-center gap-2 text-sm font-medium">
-                    <Globe2 className="size-4 text-violet-400" /> Fournisseurs
-                    externes
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    {result
-                      ? `PageSpeed ${result.providers.performance === 'available' ? 'actif' : 'indisponible'} · IA ${result.providers.ai === 'available' ? 'active' : 'non configurée'} · captures ${result.providers.screenshots === 'available' ? 'actives' : 'non configurées'}`
-                      : 'Les connexions sont contrôlables depuis Paramètres.'}
-                  </p>
-                </div>
-                {result?.performance && (
-                  <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-                    <Fact
-                      label="Performance"
-                      value={`${result.performance.performance ?? '—'}/100`}
-                    />
-                    <Fact label="LCP" value={result.performance.metrics.lcp} />
-                    <Fact
-                      label="SEO Google"
-                      value={`${result.performance.seo ?? '—'}/100`}
-                    />
-                    <Fact label="CLS" value={result.performance.metrics.cls} />
-                  </div>
+                </section>
+                {result?.screenshots && (
+                  <section className="mt-4 grid gap-4 xl:grid-cols-2">
+                    <div className="panel">
+                      <p className="panel-title">Capture ordinateur</p>
+                      <NextImage
+                        src={result.screenshots.desktop}
+                        alt={`Capture ordinateur de ${result.business.name}`}
+                        width={1440}
+                        height={900}
+                        unoptimized
+                        className="mt-4 w-full rounded-xl border border-border"
+                      />
+                    </div>
+                    <div className="panel">
+                      <p className="panel-title">Capture mobile</p>
+                      <NextImage
+                        src={result.screenshots.mobile}
+                        alt={`Capture mobile de ${result.business.name}`}
+                        width={390}
+                        height={844}
+                        unoptimized
+                        className="mx-auto mt-4 max-h-[520px] rounded-xl border border-border"
+                      />
+                    </div>
+                  </section>
                 )}
-                {result?.aiInsights && (
-                  <div className="mt-4 rounded-xl border border-violet-500/25 bg-violet-500/[.06] p-4">
-                    <p className="text-sm font-medium text-violet-300">
-                      Synthèse IA
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      {result.aiInsights.summary}
-                    </p>
-                  </div>
-                )}
-                {result && (
-                  <div className="mt-4 max-h-36 space-y-2 overflow-auto">
-                    {result.sources.map((source) => (
-                      <a
-                        key={source.url}
-                        href={source.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block truncate text-xs text-violet-400"
-                      >
-                        {source.url}
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </section>
-            {result?.screenshots && (
-              <section className="mt-4 grid gap-4 xl:grid-cols-2">
-                <div className="panel">
-                  <p className="panel-title">Capture ordinateur</p>
-              <NextImage
-                src={result.screenshots.desktop}
-                alt={`Capture ordinateur de ${result.business.name}`}
-                width={1440}
-                height={900}
-                unoptimized
-                className="mt-4 w-full rounded-xl border border-border"
-              />
-                </div>
-                <div className="panel">
-                  <p className="panel-title">Capture mobile</p>
-              <NextImage
-                src={result.screenshots.mobile}
-                alt={`Capture mobile de ${result.business.name}`}
-                width={390}
-                height={844}
-                unoptimized
-                className="mx-auto mt-4 max-h-[520px] rounded-xl border border-border"
-                  />
-                </div>
-              </section>
+              </>
+            ) : (
+              <WorkspaceSection active={active} history={history} />
             )}
           </div>
         </main>
       </div>
     </div>
+  );
+}
+
+function WorkspaceSection({
+  active,
+  history,
+}: {
+  active: string;
+  history: AuditHistoryItem[];
+}) {
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const businesses = [
+    ...new Map(history.map((item) => [item.websiteUrl, item])).values(),
+  ];
+  const titles: Record<string, string> = {
+    Entreprises: 'Entreprises analysées',
+    Audits: 'Historique des audits',
+    Rapports: 'Rapports disponibles',
+    Prospects: 'Liens pour vos prospects',
+  };
+
+  async function copyReportLink(item: AuditHistoryItem) {
+    await navigator.clipboard.writeText(
+      `${window.location.origin}/report/${item.id}`,
+    );
+    setCopiedId(item.id);
+    window.setTimeout(() => setCopiedId(null), 4_000);
+  }
+
+  const rows = active === 'Entreprises' ? businesses : history;
+  return (
+    <section>
+      <div className="mb-6">
+        <p className="eyebrow">ESPACE POVIRA</p>
+        <h2 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
+          {titles[active] ?? active}
+        </h2>
+        <p className="mt-2 text-muted-foreground">
+          {active === 'Entreprises' &&
+            'Chaque entreprise apparaît ici après son premier audit.'}
+          {active === 'Audits' &&
+            'Consultez les mesures enregistrées, du plus récent au plus ancien.'}
+          {active === 'Rapports' &&
+            'Ouvrez les rapports complets générés à partir des données sauvegardées.'}
+          {active === 'Prospects' &&
+            'Copiez un lien interne de rapport. Le partage externe restera protégé tant que vous ne l’activez pas.'}
+        </p>
+      </div>
+      {rows.length === 0 ? (
+        <div className="panel grid min-h-64 place-items-center text-center">
+          <div>
+            <Radar className="mx-auto size-9 text-violet-400" />
+            <p className="mt-4 font-medium">Aucun audit enregistré</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Utilisez « Nouvel audit » pour alimenter cette vue.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="panel divide-y divide-border p-0">
+          {rows.map((item) => (
+            <article
+              key={item.id}
+              className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center"
+            >
+              <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-violet-500/10 text-violet-400">
+                {active === 'Entreprises' ? <Building2 /> : <FileText />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-medium">{item.name}</p>
+                <p className="mt-1 truncate text-sm text-muted-foreground">
+                  {item.websiteUrl}
+                  {active !== 'Entreprises' &&
+                    ` · ${new Date(item.completedAt).toLocaleString('fr-FR')}`}
+                </p>
+              </div>
+              <span className="font-mono text-lg font-semibold">
+                {item.score == null ? '—' : `${Math.round(item.score)}/100`}
+              </span>
+              {active === 'Entreprises' && (
+                <a
+                  href={item.websiteUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={buttonVariants({ variant: 'outline' })}
+                >
+                  Voir le site
+                </a>
+              )}
+              {(active === 'Audits' || active === 'Rapports') && (
+                <a
+                  href={`/report/${item.id}`}
+                  className={buttonVariants({ variant: 'outline' })}
+                >
+                  Ouvrir le rapport
+                </a>
+              )}
+              {active === 'Prospects' && (
+                <Button variant="outline" onClick={() => copyReportLink(item)}>
+                  {copiedId === item.id ? <Check /> : <ArrowRight />}
+                  {copiedId === item.id ? 'Lien copié' : 'Copier le lien'}
+                </Button>
+              )}
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
