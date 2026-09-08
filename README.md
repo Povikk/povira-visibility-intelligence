@@ -44,7 +44,7 @@ Pour ajouter une métrique, ajouter sa mesure déterministe dans l’analyseur c
 
 ## Providers
 
-Google PageSpeed Insights fonctionne sans clé avec le quota public. Les analyses approfondies sont transférées manuellement vers ChatGPT grâce au bouton dédié, sans appel à l’API OpenAI. Les captures ordinateur/mobile passent par Cloudflare Browser Rendering avec `CLOUDFLARE_ACCOUNT_ID` et `CLOUDFLARE_BROWSER_RENDERING_TOKEN`, compatibles avec son quota gratuit.
+Google PageSpeed Insights fonctionne sans clé avec le quota public. Les analyses approfondies sont transférées manuellement vers ChatGPT grâce au bouton dédié, sans appel à l’API OpenAI. Les captures ordinateur/mobile passent par Cloudflare Browser Run avec `CLOUDFLARE_ACCOUNT_ID` et `CLOUDFLARE_BROWSER_RUN_TOKEN`, compatibles avec son quota gratuit.
 
 La page `/settings` affiche l’état de chaque connexion sans jamais révéler les secrets. Une intégration absente retourne `unavailable` et aucune valeur de remplacement n’est inventée.
 

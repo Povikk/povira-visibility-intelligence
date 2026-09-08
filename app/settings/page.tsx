@@ -66,7 +66,7 @@ export default function SettingsPage() {
               />
               <ProviderCard
                 icon={Image}
-                name="Cloudflare Browser Rendering — gratuit"
+                name="Cloudflare Browser Run — gratuit"
                 item={data.screenshots}
                 description="Génère les aperçus ordinateur et mobile dans la limite du quota gratuit Cloudflare."
               />
@@ -79,7 +79,7 @@ export default function SettingsPage() {
           <h2 className="panel-title">Captures Cloudflare gratuites</h2>
           <div className="mt-4 grid gap-2 font-mono text-sm text-muted-foreground">
             <code>CLOUDFLARE_ACCOUNT_ID</code>
-            <code>CLOUDFLARE_BROWSER_RENDERING_TOKEN</code>
+            <code>CLOUDFLARE_BROWSER_RUN_TOKEN</code>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
             Aucun moyen de paiement OpenAI n’est nécessaire. Une fois les deux

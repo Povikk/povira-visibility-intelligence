@@ -6,7 +6,7 @@ export async function GET(request: Request) {
   const raw = input.searchParams.get('url');
   const mobile = input.searchParams.get('viewport') === 'mobile';
   if (!raw) return Response.json({ error: 'URL_REQUIRED' }, { status: 400 });
-  if (!env.CLOUDFLARE_ACCOUNT_ID || !env.CLOUDFLARE_BROWSER_RENDERING_TOKEN)
+  if (!env.CLOUDFLARE_ACCOUNT_ID || !env.CLOUDFLARE_BROWSER_RUN_TOKEN)
     return Response.json(
       { error: 'SCREENSHOTS_NOT_CONFIGURED' },
       { status: 503 },
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     const options: RequestInit = {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${env.CLOUDFLARE_BROWSER_RENDERING_TOKEN}`,
+        Authorization: `Bearer ${env.CLOUDFLARE_BROWSER_RUN_TOKEN}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

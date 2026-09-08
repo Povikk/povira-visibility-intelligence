@@ -3,6 +3,6 @@ declare namespace Cloudflare {
     DB: D1Database;
     PAGESPEED_API_KEY?: string;
     CLOUDFLARE_ACCOUNT_ID?: string;
-    CLOUDFLARE_BROWSER_RENDERING_TOKEN?: string;
+    CLOUDFLARE_BROWSER_RUN_TOKEN?: string;
   }
 }

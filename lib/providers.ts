@@ -106,17 +106,17 @@ export function integrationStatus() {
     },
     screenshots: {
       status:
-        env.CLOUDFLARE_ACCOUNT_ID && env.CLOUDFLARE_BROWSER_RENDERING_TOKEN
+        env.CLOUDFLARE_ACCOUNT_ID && env.CLOUDFLARE_BROWSER_RUN_TOKEN
           ? 'connected'
           : 'missing',
       label:
-        env.CLOUDFLARE_ACCOUNT_ID && env.CLOUDFLARE_BROWSER_RENDERING_TOKEN
-          ? 'Browser Rendering connecté'
+        env.CLOUDFLARE_ACCOUNT_ID && env.CLOUDFLARE_BROWSER_RUN_TOKEN
+          ? 'Browser Run connecté'
           : 'Compte gratuit à connecter',
       missing: [
         !env.CLOUDFLARE_ACCOUNT_ID ? 'CLOUDFLARE_ACCOUNT_ID' : null,
-        !env.CLOUDFLARE_BROWSER_RENDERING_TOKEN
-          ? 'CLOUDFLARE_BROWSER_RENDERING_TOKEN'
+        !env.CLOUDFLARE_BROWSER_RUN_TOKEN
+          ? 'CLOUDFLARE_BROWSER_RUN_TOKEN'
           : null,
       ].filter(Boolean),
     },
