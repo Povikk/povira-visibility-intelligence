@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import NextImage from 'next/image';
 import {
   AlertTriangle,
@@ -48,59 +48,6 @@ const nav = [
   { label: 'Rapports', icon: FileText },
   { label: 'Prospects', icon: Target },
 ];
-const demoScores = [
-  {
-    key: 'ai',
-    label: 'Visibilité IA',
-    value: 54,
-    icon: Sparkles,
-    color: '#a78bfa',
-  },
-  {
-    key: 'search',
-    label: 'Recherche',
-    value: 68,
-    icon: Search,
-    color: '#60a5fa',
-  },
-  {
-    key: 'technicalSeo',
-    label: 'SEO technique',
-    value: 81,
-    icon: Gauge,
-    color: '#2dd4bf',
-  },
-  {
-    key: 'brand',
-    label: 'Cohérence de marque',
-    value: 72,
-    icon: CircleDot,
-    color: '#fbbf24',
-  },
-];
-const demoPriorities = [
-  {
-    title: 'Clarifier la proposition de valeur',
-    category: 'Conversion',
-    impact: 'high',
-    effort: 'medium',
-    evidenceType: 'OBSERVED',
-  },
-  {
-    title: 'Ajouter les données structurées Service',
-    category: 'SEO technique',
-    impact: 'high',
-    effort: 'low',
-    evidenceType: 'MEASURED',
-  },
-  {
-    title: 'Créer trois pages dédiées aux offres',
-    category: 'Contenu',
-    impact: 'high',
-    effort: 'medium',
-    evidenceType: 'OBSERVED',
-  },
-];
 const scoreIcons = {
   technicalSeo: Gauge,
   content: FileText,
@@ -127,9 +74,9 @@ export default function Home() {
   const [dark, setDark] = useState(true);
   const [mobile, setMobile] = useState(false);
   const [active, setActive] = useState('Vue d’ensemble');
-  const [business, setBusiness] = useState('Nova Mapping');
-  const [url, setUrl] = useState('https://example.com');
-  const [activity, setActivity] = useState('Créateur de mappings FiveM');
+  const [business, setBusiness] = useState('');
+  const [url, setUrl] = useState('');
+  const [activity, setActivity] = useState('');
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -250,29 +197,21 @@ export default function Home() {
       .catch(() => setHistory([]));
   }, [result?.id]);
 
-  const displayScores = useMemo(
-    () =>
-      result
-        ? result.scores.slice(0, 4).map((item, index) => ({
-            ...item,
-            score: item.value,
-            icon: scoreIcons[item.key],
-            color: scoreColors[index],
-          }))
-        : demoScores.map((item) => ({ ...item, score: item.value })),
-    [result],
-  );
-  const displayPriorities = useMemo(
-    () =>
-      result
-        ? result.findings
-            .sort((a, b) => severityRank(b.severity) - severityRank(a.severity))
-            .slice(0, 5)
-        : demoPriorities,
-    [result],
-  );
-  const mainScore = result?.poviraScore ?? 72;
-  const pages = result?.pages.length ?? 18;
+  const displayScores = result
+    ? result.scores.slice(0, 4).map((item, index) => ({
+        ...item,
+        score: item.value,
+        icon: scoreIcons[item.key],
+        color: scoreColors[index],
+      }))
+    : [];
+  const displayPriorities = result
+    ? [...result.findings]
+        .sort((a, b) => severityRank(b.severity) - severityRank(a.severity))
+        .slice(0, 5)
+    : [];
+  const mainScore = result?.poviraScore ?? 0;
+  const pages = result?.pages.length ?? 0;
 
   return (
     <div className={dark ? 'dark' : ''}>
@@ -362,348 +301,362 @@ export default function Home() {
           </header>
           <div className="mx-auto max-w-[1500px] p-5 md:p-8">
             {active === 'Vue d’ensemble' ? (
-              <>
-                <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-                  <div>
-                    <div className="eyebrow">
-                      <span
-                        className={`pulse-dot ${result ? '!bg-emerald-400' : ''}`}
-                      />{' '}
-                      {result
-                        ? 'Audit réel mesuré'
-                        : 'Données de démonstration — Povira'}
-                    </div>
-                    <h2 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
-                      La visibilité de {business}, en un coup d’œil.
-                    </h2>
-                    <p className="mt-1 text-muted-foreground">
-                      {result
-                        ? `Collecté ${new Date(result.collectedAt).toLocaleString('fr-FR')} · ${pages} pages analysées · ${(result.durationMs / 1000).toFixed(1)} s`
-                        : `Exemple interactif · ${pages} pages simulées`}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-end gap-2">
-                    {result && (
-                      <Button size="lg" onClick={analyzeWithChatGPT}>
-                        {chatGptCopied ? <Check /> : <MessageCircle />}
-                        {chatGptCopied
-                          ? 'Copié — collez dans ChatGPT'
-                          : 'Analyser avec ChatGPT'}
-                      </Button>
-                    )}
-                    <a
-                      href={result ? `/report/${result.id}` : '/report/demo'}
-                      className={buttonVariants({
-                        variant: 'outline',
-                        size: 'lg',
-                      })}
-                    >
-                      <FileText /> Générer le rapport
-                    </a>
-                  </div>
-                </div>
-                {running && (
-                  <section
-                    className="mb-6 rounded-2xl border border-violet-500/30 bg-violet-500/[.07] p-5"
-                    aria-live="polite"
-                  >
-                    <div className="mb-3 flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">
-                          Audit réel de {business} en cours
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Lecture du robots.txt, exploration interne, mesures et
-                          sauvegarde
-                        </p>
-                      </div>
-                      <span className="font-mono text-sm text-violet-400">
-                        {progress}%
-                      </span>
-                    </div>
-                    <Progress value={progress} />
-                  </section>
-                )}
-                {error && (
-                  <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-500/25 bg-red-500/10 p-4 text-sm text-red-400">
-                    <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              result ? (
+                <>
+                  <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
                     <div>
-                      <strong>Audit interrompu.</strong>
-                      <p className="mt-1 text-red-300/80">{error}</p>
-                    </div>
-                  </div>
-                )}
-                <section className="grid gap-4 xl:grid-cols-[1.7fr_1fr]">
-                  <div className="score-hero">
-                    <div className="score-orbit">
-                      <span>{mainScore}</span>
-                      <small>/ 100</small>
-                    </div>
-                    <div className="relative z-10 flex min-w-0 flex-1 flex-col justify-center">
-                      <div className="eyebrow text-violet-300">
-                        Povira Score · méthode {result?.scoreVersion ?? 'démo'}
-                      </div>
-                      <h3 className="mt-2 text-2xl font-semibold">
-                        {scoreSummary(mainScore)}
-                      </h3>
-                      <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">
-                        {result
-                          ? 'Score calculé uniquement à partir du HTML réellement collecté. Les dimensions sans fournisseur configuré sont exclues.'
-                          : 'Lancez un audit pour remplacer toutes les données simulées par les mesures du site saisi.'}
-                      </p>
-                      <div className="mt-5 flex flex-wrap gap-3">
-                        <span className="result-badge good">
-                          <ShieldCheck />{' '}
-                          {result
-                            ? 'Mesures sauvegardées'
-                            : 'Mode démonstration'}
-                        </span>
-                        <span className="result-badge">
-                          <Globe2 />{' '}
-                          {result ? result.business.url : 'example.com'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="panel">
-                    <div className="panel-heading">
-                      <div>
-                        <p className="panel-title">Éléments découverts</p>
-                        <p className="panel-subtitle">Page principale</p>
-                      </div>
-                      <span className="trend">{result ? 'LIVE' : 'DEMO'}</span>
-                    </div>
-                    <div className="mt-6 space-y-4 text-sm">
-                      <Fact
-                        label="Titre"
-                        value={
-                          result?.pages[0]?.title ??
-                          'Nova Mapping — Univers FiveM sur mesure'
-                        }
-                      />
-                      <Fact
-                        label="H1"
-                        value={
-                          result
-                            ? `${result.pages[0].h1Count} détecté(s)`
-                            : '1 détecté'
-                        }
-                      />
-                      <Fact
-                        label="Schema.org"
-                        value={
-                          result
-                            ? `${result.pages[0].schemaCount} bloc(s)`
-                            : '1 bloc'
-                        }
-                      />
-                      <Fact
-                        label="Images sans alt"
-                        value={
-                          result
-                            ? `${result.pages[0].imagesWithoutAlt} / ${result.pages[0].imageCount}`
-                            : '2 / 14'
-                        }
-                      />
-                      <Fact
-                        label="Sitemap"
-                        value={
-                          result
-                            ? result.sitemap.available
-                              ? 'Détecté'
-                              : 'Non trouvé'
-                            : 'Détecté'
-                        }
-                      />
-                    </div>
-                  </div>
-                </section>
-                <section className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                  {displayScores.map(
-                    ({ label, score, icon: Icon, color, key }) => (
-                      <article className="metric-card" key={key}>
+                      <div className="eyebrow">
                         <span
-                          className="metric-icon"
-                          style={{ color, background: `${color}18` }}
-                        >
-                          <Icon />
-                        </span>
-                        <div className="mt-5 flex items-end justify-between">
-                          <div>
-                            <p className="text-sm text-muted-foreground">
-                              {label}
-                            </p>
-                            <p className="mt-1 text-3xl font-semibold">
-                              {score}
-                              <span className="text-base text-muted-foreground">
-                                /100
-                              </span>
-                            </p>
-                          </div>
-                          <div className="mini-bar">
-                            <span
-                              style={{ height: `${score}%`, background: color }}
-                            />
-                          </div>
-                        </div>
-                      </article>
-                    ),
-                  )}
-                </section>
-                <section className="mt-4 grid gap-4 xl:grid-cols-[1.5fr_1fr]">
-                  <div className="panel">
-                    <div className="panel-heading">
-                      <div>
-                        <p className="panel-title">
-                          Priorités issues de l’audit
-                        </p>
-                        <p className="panel-subtitle">
-                          Constat, impact et correction
-                        </p>
+                          className={`pulse-dot ${result ? '!bg-emerald-400' : ''}`}
+                        />{' '}
+                        {result
+                          ? 'Audit réel mesuré'
+                          : 'Données de démonstration — Povira'}
                       </div>
-                      <span className="text-sm text-violet-400">
-                        {result?.findings.length ?? 17} opportunités
-                      </span>
+                      <h2 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
+                        La visibilité de {business}, en un coup d’œil.
+                      </h2>
+                      <p className="mt-1 text-muted-foreground">
+                        {result
+                          ? `Collecté ${new Date(result.collectedAt).toLocaleString('fr-FR')} · ${pages} pages analysées · ${(result.durationMs / 1000).toFixed(1)} s`
+                          : `Exemple interactif · ${pages} pages simulées`}
+                      </p>
                     </div>
-                    <div className="mt-2 divide-y divide-border">
-                      {displayPriorities.map((item, index) => (
-                        <div className="priority-row" key={item.title}>
-                          <span className="priority-number">0{index + 1}</span>
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium">{item.title}</p>
-                            <p className="mt-1 text-sm text-muted-foreground">
-                              {item.category}
-                              {'observation' in item
-                                ? ` · ${String(item.observation)}`
-                                : ''}
-                            </p>
-                          </div>
-                          <span
-                            className={`data-badge ${item.evidenceType.toLowerCase()}`}
-                          >
-                            {item.evidenceType}
-                          </span>
-                          <div className="hidden w-32 sm:block">
-                            <p className="text-xs text-muted-foreground">
-                              Impact / effort
-                            </p>
-                            <p className="mt-1 text-sm">
-                              {translate(item.impact)} ·{' '}
-                              {translate(item.effort)}
-                            </p>
-                          </div>
-                          <ChevronRight className="size-4 text-muted-foreground" />
-                        </div>
-                      ))}
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      {result && (
+                        <Button size="lg" onClick={analyzeWithChatGPT}>
+                          {chatGptCopied ? <Check /> : <MessageCircle />}
+                          {chatGptCopied
+                            ? 'Copié — collez dans ChatGPT'
+                            : 'Analyser avec ChatGPT'}
+                        </Button>
+                      )}
+                      <a
+                        href={result ? `/report/${result.id}` : '/report/demo'}
+                        className={buttonVariants({
+                          variant: 'outline',
+                          size: 'lg',
+                        })}
+                      >
+                        <FileText /> Générer le rapport
+                      </a>
                     </div>
                   </div>
-                  <div className="panel">
-                    <div className="panel-heading">
+                  {running && (
+                    <section
+                      className="mb-6 rounded-2xl border border-violet-500/30 bg-violet-500/[.07] p-5"
+                      aria-live="polite"
+                    >
+                      <div className="mb-3 flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">
+                            Audit réel de {business} en cours
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Lecture du robots.txt, exploration interne, mesures
+                            et sauvegarde
+                          </p>
+                        </div>
+                        <span className="font-mono text-sm text-violet-400">
+                          {progress}%
+                        </span>
+                      </div>
+                      <Progress value={progress} />
+                    </section>
+                  )}
+                  {error && (
+                    <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-500/25 bg-red-500/10 p-4 text-sm text-red-400">
+                      <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                       <div>
-                        <p className="panel-title">Sources et disponibilité</p>
-                        <p className="panel-subtitle">
-                          Transparence des données
+                        <strong>Audit interrompu.</strong>
+                        <p className="mt-1 text-red-300/80">{error}</p>
+                      </div>
+                    </div>
+                  )}
+                  <section className="grid gap-4 xl:grid-cols-[1.7fr_1fr]">
+                    <div className="score-hero">
+                      <div className="score-orbit">
+                        <span>{mainScore}</span>
+                        <small>/ 100</small>
+                      </div>
+                      <div className="relative z-10 flex min-w-0 flex-1 flex-col justify-center">
+                        <div className="eyebrow text-violet-300">
+                          Povira Score · méthode{' '}
+                          {result?.scoreVersion ?? 'démo'}
+                        </div>
+                        <h3 className="mt-2 text-2xl font-semibold">
+                          {scoreSummary(mainScore)}
+                        </h3>
+                        <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">
+                          {result
+                            ? 'Score calculé uniquement à partir du HTML réellement collecté. Les dimensions sans fournisseur configuré sont exclues.'
+                            : 'Lancez un audit pour remplacer toutes les données simulées par les mesures du site saisi.'}
                         </p>
+                        <div className="mt-5 flex flex-wrap gap-3">
+                          <span className="result-badge good">
+                            <ShieldCheck />{' '}
+                            {result
+                              ? 'Mesures sauvegardées'
+                              : 'Mode démonstration'}
+                          </span>
+                          <span className="result-badge">
+                            <Globe2 />{' '}
+                            {result ? result.business.url : 'example.com'}
+                          </span>
+                        </div>
                       </div>
-                      <ShieldCheck className="size-5 text-emerald-400" />
                     </div>
-                    <div className="mt-6 space-y-4">
-                      <Coverage
-                        label="Pages mesurées"
-                        value={result ? 100 : 38}
-                        color="#2dd4bf"
-                      />
-                      <Coverage
-                        label="Données observées"
-                        value={
-                          result
-                            ? Math.round(
-                                (result.findings.filter(
-                                  (item) => item.evidenceType === 'OBSERVED',
-                                ).length /
-                                  Math.max(1, result.findings.length)) *
-                                  100,
-                              )
-                            : 31
-                        }
-                        color="#60a5fa"
-                      />
-                    </div>
-                    <div className="mt-7 rounded-xl border border-border bg-muted/30 p-4">
-                      <p className="flex items-center gap-2 text-sm font-medium">
-                        <Globe2 className="size-4 text-violet-400" />{' '}
-                        Fournisseurs externes
-                      </p>
-                      <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                        {result
-                          ? `PageSpeed gratuit ${result.providers.performance === 'available' ? 'actif' : 'indisponible'} · ChatGPT manuel actif · captures Cloudflare ${result.providers.screenshots === 'available' ? 'actives' : 'à configurer'}`
-                          : 'Audit interne, PageSpeed gratuit et ChatGPT manuel.'}
-                      </p>
-                    </div>
-                    {result?.performance && (
-                      <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                    <div className="panel">
+                      <div className="panel-heading">
+                        <div>
+                          <p className="panel-title">Éléments découverts</p>
+                          <p className="panel-subtitle">Page principale</p>
+                        </div>
+                        <span className="trend">
+                          {result ? 'LIVE' : 'DEMO'}
+                        </span>
+                      </div>
+                      <div className="mt-6 space-y-4 text-sm">
                         <Fact
-                          label="Performance"
-                          value={`${result.performance.performance ?? '—'}/100`}
+                          label="Titre"
+                          value={
+                            result?.pages[0]?.title ??
+                            'Nova Mapping — Univers FiveM sur mesure'
+                          }
                         />
                         <Fact
-                          label="LCP"
-                          value={result.performance.metrics.lcp}
+                          label="H1"
+                          value={
+                            result
+                              ? `${result.pages[0].h1Count} détecté(s)`
+                              : '1 détecté'
+                          }
                         />
                         <Fact
-                          label="SEO Google"
-                          value={`${result.performance.seo ?? '—'}/100`}
+                          label="Schema.org"
+                          value={
+                            result
+                              ? `${result.pages[0].schemaCount} bloc(s)`
+                              : '1 bloc'
+                          }
                         />
                         <Fact
-                          label="CLS"
-                          value={result.performance.metrics.cls}
+                          label="Images sans alt"
+                          value={
+                            result
+                              ? `${result.pages[0].imagesWithoutAlt} / ${result.pages[0].imageCount}`
+                              : '2 / 14'
+                          }
+                        />
+                        <Fact
+                          label="Sitemap"
+                          value={
+                            result
+                              ? result.sitemap.available
+                                ? 'Détecté'
+                                : 'Non trouvé'
+                              : 'Détecté'
+                          }
                         />
                       </div>
-                    )}
-                    {result && (
-                      <div className="mt-4 max-h-36 space-y-2 overflow-auto">
-                        {result.sources.map((source) => (
-                          <a
-                            key={source.url}
-                            href={source.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="block truncate text-xs text-violet-400"
+                    </div>
+                  </section>
+                  <section className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    {displayScores.map(
+                      ({ label, score, icon: Icon, color, key }) => (
+                        <article className="metric-card" key={key}>
+                          <span
+                            className="metric-icon"
+                            style={{ color, background: `${color}18` }}
                           >
-                            {source.url}
-                          </a>
+                            <Icon />
+                          </span>
+                          <div className="mt-5 flex items-end justify-between">
+                            <div>
+                              <p className="text-sm text-muted-foreground">
+                                {label}
+                              </p>
+                              <p className="mt-1 text-3xl font-semibold">
+                                {score}
+                                <span className="text-base text-muted-foreground">
+                                  /100
+                                </span>
+                              </p>
+                            </div>
+                            <div className="mini-bar">
+                              <span
+                                style={{
+                                  height: `${score}%`,
+                                  background: color,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </article>
+                      ),
+                    )}
+                  </section>
+                  <section className="mt-4 grid gap-4 xl:grid-cols-[1.5fr_1fr]">
+                    <div className="panel">
+                      <div className="panel-heading">
+                        <div>
+                          <p className="panel-title">
+                            Priorités issues de l’audit
+                          </p>
+                          <p className="panel-subtitle">
+                            Constat, impact et correction
+                          </p>
+                        </div>
+                        <span className="text-sm text-violet-400">
+                          {result?.findings.length ?? 17} opportunités
+                        </span>
+                      </div>
+                      <div className="mt-2 divide-y divide-border">
+                        {displayPriorities.map((item, index) => (
+                          <div className="priority-row" key={item.title}>
+                            <span className="priority-number">
+                              0{index + 1}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium">{item.title}</p>
+                              <p className="mt-1 text-sm text-muted-foreground">
+                                {item.category}
+                                {'observation' in item
+                                  ? ` · ${String(item.observation)}`
+                                  : ''}
+                              </p>
+                            </div>
+                            <span
+                              className={`data-badge ${item.evidenceType.toLowerCase()}`}
+                            >
+                              {item.evidenceType}
+                            </span>
+                            <div className="hidden w-32 sm:block">
+                              <p className="text-xs text-muted-foreground">
+                                Impact / effort
+                              </p>
+                              <p className="mt-1 text-sm">
+                                {translate(item.impact)} ·{' '}
+                                {translate(item.effort)}
+                              </p>
+                            </div>
+                            <ChevronRight className="size-4 text-muted-foreground" />
+                          </div>
                         ))}
                       </div>
-                    )}
-                  </div>
-                </section>
-                {result?.screenshots && (
-                  <section className="mt-4 grid gap-4 xl:grid-cols-2">
-                    <div className="panel">
-                      <p className="panel-title">Capture ordinateur</p>
-                      <NextImage
-                        src={result.screenshots.desktop}
-                        alt={`Capture ordinateur de ${result.business.name}`}
-                        width={1440}
-                        height={900}
-                        unoptimized
-                        className="mt-4 w-full rounded-xl border border-border"
-                      />
                     </div>
                     <div className="panel">
-                      <p className="panel-title">Capture mobile</p>
-                      <NextImage
-                        src={result.screenshots.mobile}
-                        alt={`Capture mobile de ${result.business.name}`}
-                        width={390}
-                        height={844}
-                        unoptimized
-                        className="mx-auto mt-4 max-h-[520px] rounded-xl border border-border"
-                      />
+                      <div className="panel-heading">
+                        <div>
+                          <p className="panel-title">
+                            Sources et disponibilité
+                          </p>
+                          <p className="panel-subtitle">
+                            Transparence des données
+                          </p>
+                        </div>
+                        <ShieldCheck className="size-5 text-emerald-400" />
+                      </div>
+                      <div className="mt-6 space-y-4">
+                        <Coverage
+                          label="Pages mesurées"
+                          value={result ? 100 : 38}
+                          color="#2dd4bf"
+                        />
+                        <Coverage
+                          label="Données observées"
+                          value={
+                            result
+                              ? Math.round(
+                                  (result.findings.filter(
+                                    (item) => item.evidenceType === 'OBSERVED',
+                                  ).length /
+                                    Math.max(1, result.findings.length)) *
+                                    100,
+                                )
+                              : 31
+                          }
+                          color="#60a5fa"
+                        />
+                      </div>
+                      <div className="mt-7 rounded-xl border border-border bg-muted/30 p-4">
+                        <p className="flex items-center gap-2 text-sm font-medium">
+                          <Globe2 className="size-4 text-violet-400" />{' '}
+                          Fournisseurs externes
+                        </p>
+                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                          {result
+                            ? `PageSpeed gratuit ${result.providers.performance === 'available' ? 'actif' : 'indisponible'} · ChatGPT manuel actif · captures Cloudflare ${result.providers.screenshots === 'available' ? 'actives' : 'à configurer'}`
+                            : 'Audit interne, PageSpeed gratuit et ChatGPT manuel.'}
+                        </p>
+                      </div>
+                      {result?.performance && (
+                        <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                          <Fact
+                            label="Performance"
+                            value={`${result.performance.performance ?? '—'}/100`}
+                          />
+                          <Fact
+                            label="LCP"
+                            value={result.performance.metrics.lcp}
+                          />
+                          <Fact
+                            label="SEO Google"
+                            value={`${result.performance.seo ?? '—'}/100`}
+                          />
+                          <Fact
+                            label="CLS"
+                            value={result.performance.metrics.cls}
+                          />
+                        </div>
+                      )}
+                      {result && (
+                        <div className="mt-4 max-h-36 space-y-2 overflow-auto">
+                          {result.sources.map((source) => (
+                            <a
+                              key={source.url}
+                              href={source.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="block truncate text-xs text-violet-400"
+                            >
+                              {source.url}
+                            </a>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </section>
-                )}
-              </>
+                  {result?.screenshots && (
+                    <section className="mt-4 grid gap-4 xl:grid-cols-2">
+                      <div className="panel">
+                        <p className="panel-title">Capture ordinateur</p>
+                        <NextImage
+                          src={result.screenshots.desktop}
+                          alt={`Capture ordinateur de ${result.business.name}`}
+                          width={1440}
+                          height={900}
+                          unoptimized
+                          className="mt-4 w-full rounded-xl border border-border"
+                        />
+                      </div>
+                      <div className="panel">
+                        <p className="panel-title">Capture mobile</p>
+                        <NextImage
+                          src={result.screenshots.mobile}
+                          alt={`Capture mobile de ${result.business.name}`}
+                          width={390}
+                          height={844}
+                          unoptimized
+                          className="mx-auto mt-4 max-h-[520px] rounded-xl border border-border"
+                        />
+                      </div>
+                    </section>
+                  )}
+                </>
+              ) : (
+                <EmptyDashboard />
+              )
             ) : (
               <WorkspaceSection active={active} history={history} />
             )}
@@ -711,6 +664,22 @@ export default function Home() {
         </main>
       </div>
     </div>
+  );
+}
+
+function EmptyDashboard() {
+  return (
+    <section className="panel grid min-h-[520px] place-items-center text-center">
+      <div className="max-w-md">
+        <Radar className="mx-auto size-11 text-violet-400" />
+        <p className="mt-5 text-xl font-semibold">Votre espace est vide</p>
+        <p className="mt-2 leading-7 text-muted-foreground">
+          Lancez votre premier audit avec « Nouvel audit ». Les scores,
+          priorités et rapports apparaîtront ici à partir des données réellement
+          mesurées.
+        </p>
+      </div>
+    </section>
   );
 }
 

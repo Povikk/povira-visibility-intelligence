@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { analyzeBusiness } from '@/lib/analyzer';
 import { safeUrlSchema } from '@/lib/url-safety';
-import { getAuditHistory, saveAudit } from '@/db/audit-store';
+import { clearAuditData, getAuditHistory, saveAudit } from '@/db/audit-store';
 import { integrationStatus, PageSpeedProvider } from '@/lib/providers';
 
 const auditRequest = z.object({
@@ -77,5 +77,17 @@ export async function GET() {
     );
   } catch {
     return Response.json({ audits: [], warning: 'Historique indisponible.' });
+  }
+}
+
+export async function DELETE() {
+  try {
+    await clearAuditData();
+    return Response.json(
+      { cleared: true },
+      { headers: { 'Cache-Control': 'no-store' } },
+    );
+  } catch {
+    return Response.json({ error: 'DATABASE_UNAVAILABLE' }, { status: 503 });
   }
 }
